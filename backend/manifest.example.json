@@ -1,0 +1,19 @@
+{
+  "S1.mat": {
+    "subjectId": "p300-speller:S1",
+    "recordingStartedAt": null,
+    "timeBase": {
+      "originalTimezone": "REPLACE_WITH_VERIFIED_TIMEZONE_OR_OFFSET",
+      "evidence": "REPLACE_WITH_SOURCE_OF_VERIFIED_FIRST_SAMPLE_TIME",
+      "derivation": "uniform_sample_clock",
+      "precisionMs": 1
+    },
+    "channels": ["Fz", "Cz", "P3", "Pz", "P4", "PO7", "PO8", "Oz"],
+    "signalUnit": "unknown",
+    "device": {
+      "manufacturer": "g.tec",
+      "model": "Unicorn Brain Interface",
+      "provenance": "supplied TVLDA abstract and overview; wet electrodes"
+    }
+  }
+}
