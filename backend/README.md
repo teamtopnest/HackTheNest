@@ -1,39 +1,157 @@
-# Local EEG stream
+# Local Hybrid Black EEG backend
 
-This service runs on the computer paired with a g.tec Unicorn Hybrid Black. It uses g.Pype to acquire the eight EEG channels at 250 Hz, applies a causal Butterworth bandpass from 0.5 to 30 Hz, and exposes the filtered samples over a local WebSocket. The device's optional motion and status channels are disabled.
+This Windows-local FastAPI service acquires **Unicorn Hybrid Black** EEG using
+`gp.HybridBlack`: eight channels at 250 Hz, in microvolts. It applies a stateful,
+causal order-2 Butterworth **0.5-30 Hz bandpass**, records filtered blocks to
+MongoDB when configured, and optionally streams them over a WebSocket.
+Motion and auxiliary channels are disabled.
 
-## Setup
+## Hardware prerequisite
 
-Pair the headset with Windows Bluetooth settings, then from this folder install the service:
+1. Power on the headset and pair it in Windows Bluetooth settings.
+2. Use a supported Bluetooth adapter (preferably the vendor-supplied dongle) and
+   install the applicable g.tec drivers. Close any other recorder using the headset.
+3. Discovery lists **paired** Hybrid Black serials on Windows. It does not pair
+   devices, prove they are powered on, or list arbitrary Bluetooth peripherals.
+   Successful acquisition is the live connectivity check.
+
+The `Unicorn-BCI-Core-Recorder` folder contains the **BCI Core** recorder manual and
+C# LSL/UDP receiver examples, not the recorder executable or Hybrid Black server.
+Its recorder is installed through g.tec Suite. BCI Core and Hybrid Black are
+different devices: the supplied `gp.BCICore(...)` example is not the source to use
+for a Hybrid Black. This backend talks directly to the headset; do not run a
+vendor recorder against the same headset simultaneously.
+
+If discovery reports `BLUETOOTH_SOCKET_FAILED` / code 3 ("Couldn't initialize
+Bluetooth lookup service"), the API is running but the native SDK cannot initialize
+Bluetooth. Check the adapter in Device Manager, Bluetooth drivers and pairing;
+verify `Get-Service bthserv` reports Running. A running service alone does not
+guarantee a compatible adapter.
+
+## Install and start
+
+Use 64-bit Python 3.12 (the validated interpreter), from this folder:
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+Copy-Item .env.example .env
 ```
 
-Run the API on loopback:
+Edit `.env` locally; it is gitignored. For Atlas, set:
+
+```dotenv
+MONGODB_URI=mongodb+srv://<username>:<URL-encoded-password>@<cluster-host>/?retryWrites=true&w=majority
+MONGODB_DATABASE=hackthenest
+UNICORN_SERIAL=
+```
+
+Use your Atlas hostname, database user and password, not the angle-bracket
+placeholders. Percent-encode reserved characters in username/password (for example
+`@` becomes `%40`). Give the database user read/write permissions for this
+database and allow **your current public IP** in Atlas Network Access. Do not
+commit credentials or paste them into chat. Environment variables override `.env`.
+
+Leave `MONGODB_URI` empty for **streaming only**. When a URI is configured, MongoDB
+must be reachable before acquisition starts; a storage failure does not silently
+fall back to streaming-only mode. Device registration also requires MongoDB.
+
+Start the server:
 
 ```powershell
-python run.py
+.\.venv\Scripts\python.exe run.py
 ```
 
-The HTTP API is available at `http://127.0.0.1:8000`:
+Open `http://127.0.0.1:8000/docs` for the interactive API. Keep a **single server
+process**, bound to loopback (no reload or multiple workers). These local control
+endpoints have no authentication; do not expose the server publicly.
 
-- `GET /api/status` reports the device state.
-- `POST /api/device/connect` opens the g.Pype pipeline and device.
-- `POST /api/device/disconnect` stops acquisition and releases the device.
-- `WS /ws/eeg` accepts `{"action":"start"}` as its first message, then sends one JSON frame per acquired block. Send `{"action":"stop"}` to stop acquisition.
+## Discover, register, collect
 
-The first WebSocket start request connects the device if it is not already connected. Only one WebSocket stream is allowed at a time. Frames include the host receive timestamp, sample index, sample rate, channel indices (0–7), channel count, microvolt units, and samples; sample indices make any dropped blocks visible. If the bounded WebSocket buffer fills, the oldest block is discarded and the cumulative dropped-block count is included in subsequent frames.
+In another PowerShell terminal:
 
-MongoDB storage and Nextflow/Seqera batch ingestion are not part of this service yet.
+```powershell
+$api = "http://127.0.0.1:8000"
+Invoke-RestMethod "$api/api/devices"
+
+# Replace this with a serial returned above.
+$device = @{ serial = "UN-1234" } | ConvertTo-Json
+Invoke-RestMethod "$api/api/device/register" -Method Post -ContentType "application/json" -Body $device
+Invoke-RestMethod "$api/api/acquisition/start" -Method Post -ContentType "application/json" -Body $device
+Invoke-RestMethod "$api/api/status"
+
+# Stop acquisition, flush queued database writes and finalize the session.
+Invoke-RestMethod "$api/api/acquisition/stop" -Method Post
+```
+
+Registration upserts the paired serial into MongoDB's `devices` collection; it
+does not perform Windows Bluetooth pairing and is optional for acquisition.
+Starting with no JSON body selects `UNICORN_SERIAL` if set, otherwise the only
+paired device. Multiple paired devices require explicit selection.
+
+- `POST /api/acquisition/start` starts acquisition and database collection
+  **without any WebSocket client**.
+- `POST /api/acquisition/stop` stops/releases the device and flushes recording.
+- `POST /api/device/connect` and `/api/device/disconnect` are compatibility
+  aliases for start/stop, not separate idle connection states.
+- `GET /api/status` reports device state and storage configuration, current/last
+  session ID, confirmed persisted block/sample counts and errors.
+- `WS /ws/eeg`: send `{"action":"start"}` first, then `{"action":"stop"}` to end
+  viewing. Only one viewer is allowed. If HTTP already started collection, viewer
+  stop/disconnect **does not stop collection**; use the HTTP stop endpoint.
+  If the WebSocket starts acquisition itself, viewer stop/disconnect stops it,
+  preserving the original streaming workflow.
+
+If status reports an acquisition or storage error, stop the session, resolve the
+cause and start a new one. No samples for ten seconds is reported as a device
+error rather than remaining apparently connected. Errors are not auto-recovered.
+Ctrl+C performs normal device shutdown and flushes recording.
+
+## Stored data and backpressure
+
+`sessions` contains session UUID, selected serial, channel/rate/unit/filter
+metadata, start/stop UTC times, completion/error state and persisted counts.
+`eeg_blocks` stores one document per filtered 25-sample block, with session ID,
+sample index, sample count, host receive UTC timestamp and a samples-by-8 array.
+A unique `(session_id, sample_index_start)` index separates/order-checks blocks.
+Indices restart at zero for each session. These are **filtered EEG only**, not raw
+EEG, hardware timestamps, battery telemetry or hardware packet-loss measurements.
+`devices` is the serial-keyed device registry.
+
+The 32-block viewer buffer can discard the oldest block; frames report
+`dropped_blocks_total` for **viewer-buffer** loss only. MongoDB receives blocks
+independently, before that buffer, so slow or absent viewers do not lose database
+data. Its separate 64-block recording queue never silently drops on overflow:
+write failure/overflow reports an error and marks the session incomplete when
+finalized. Stop flushes accepted blocks on a healthy database; after a writer
+error, pending unsaved blocks are discarded and the error is retained. No offline
+disk spool or retry/replay is implemented. A forced process kill cannot flush or
+finalize sessions; an interrupted session can remain marked `recording`.
+
+## Why 0.5-30 Hz?
+
+This is a reasonable band for general EEG rhythm work: delta, theta, alpha and
+most beta, with slow drift and higher-frequency muscle/line noise attenuated.
+It excludes gamma/high beta above 30 Hz; choose a different band if the experiment
+requires those. Filtering does not remove all eye/motion/muscle artifacts.
+
+Cutoffs are not brick walls: the amplitude at 0.5 and 30 Hz is about -3 dB, and an
+order-2 filter leaves some 50/60 Hz energy. Separate mains notches are usually
+unnecessary for a 30 Hz upper cutoff, but can be warranted by measured residual
+line noise; neither 50 nor 60 Hz notch is applied by default. The causal filter
+preserves state across blocks but introduces phase delay and startup transients;
+allow several seconds to settle. A Qt `MainApp`/scope is not needed by this
+headless backend.
 
 ## Validation
 
-Install test dependencies and run the hardware-independent tests:
-
 ```powershell
-python -m pip install -r requirements-dev.txt
-python -m pytest
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pytest -q
 ```
+
+Tests cover device selection/discovery errors, lifecycle, standalone collection,
+MongoDB document writes/session finalization and explicit failure/backpressure
+(with an injected client), plus the actual g.Pype filter's cutoff response, drift
+rejection and continuity across blocks. Real Bluetooth acquisition and Atlas
+connectivity still require the paired hardware and valid local credentials.

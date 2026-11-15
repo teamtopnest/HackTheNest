@@ -46,3 +46,21 @@ def test_bandpass_retains_10hz_and_attenuates_60hz_with_state_across_blocks():
     settled = continuous[sample_rate_hz * 4 :, 0]
     assert _amplitude(settled, 10, sample_rate_hz) > 0.9
     assert _amplitude(settled, 60, sample_rate_hz) < 0.4
+
+
+def test_bandpass_drift_rejection_and_half_power_cutoffs():
+    sample_rate_hz = 250
+    time = np.arange(sample_rate_hz * 40) / sample_rate_hz
+    frequencies = [0.1, 0.5, 10, 30, 50, 60]
+    signal = sum(np.sin(2 * np.pi * frequency * time) for frequency in frequencies)
+    samples = np.repeat(signal[:, None], 8, axis=1)
+    output = _filter_node().step({gp.Constants.Defaults.PORT_IN: samples})[
+        gp.Constants.Defaults.PORT_OUT
+    ]
+    settled = output[sample_rate_hz * 20 :, 0]
+    assert _amplitude(settled, 0.1, sample_rate_hz) < 0.06
+    assert 0.65 < _amplitude(settled, 0.5, sample_rate_hz) < 0.8
+    assert _amplitude(settled, 10, sample_rate_hz) > 0.95
+    assert 0.65 < _amplitude(settled, 30, sample_rate_hz) < 0.8
+    assert _amplitude(settled, 50, sample_rate_hz) < 0.3
+    assert _amplitude(settled, 60, sample_rate_hz) < 0.2
