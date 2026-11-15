@@ -10,11 +10,13 @@ from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictInt
+from fastapi.responses import Response
 
 from eeg_stream.device import DeviceConnectionError, EEGDevice, discover_devices
 from eeg_stream.headsets import HeadsetError, check, discover
 from eeg_stream.storage import MongoRecorder, StorageError
+from eeg_stream.speech import synthesize_demo_speech
 
 LOGGER = logging.getLogger(__name__)
 ALLOWED_ORIGINS = {"http://localhost:5173", "http://127.0.0.1:5173"}
@@ -26,6 +28,10 @@ class DeviceSelection(BaseModel):
 class HeadsetSelection(DeviceSelection):
     model: Literal["hybrid-black", "core-4", "core-8", "nautilus-pro", "nautilus-research"]
     sampling_rate_hz: Literal[250, 500] = 250
+
+
+class DemoSpeechSelection(BaseModel):
+    path: list[StrictInt] = Field(min_length=1, max_length=3)
 
 
 def create_app(
@@ -59,6 +65,14 @@ def create_app(
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
     )
+
+    @app.post("/api/demo/speech")
+    def demo_speech(selection: DemoSpeechSelection) -> Response:
+        return Response(
+            content=synthesize_demo_speech(selection.path),
+            media_type="audio/mpeg",
+            headers={"Cache-Control": "no-store"},
+        )
 
     @app.get("/api/status")
     def get_status() -> dict[str, Any]:
