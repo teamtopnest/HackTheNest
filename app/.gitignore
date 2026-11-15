@@ -20,6 +20,7 @@ dist-ssr
 # every build, and the deploy runs one before reading them.
 .output
 .wrangler
+.firebase
 
 # Editor directories and files
 .vscode/*
