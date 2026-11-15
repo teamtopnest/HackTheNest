@@ -1,19 +1,48 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import os
 import queue
+from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
-from eeg_stream.device import DeviceConnectionError, EEGDevice
+from eeg_stream.device import DeviceConnectionError, EEGDevice, discover_devices
+from eeg_stream.storage import MongoRecorder, StorageError
+
+LOGGER = logging.getLogger(__name__)
+
+class DeviceSelection(BaseModel):
+    serial: str = Field(min_length=1, max_length=128, pattern=r"^\S+$")
 
 
-def create_app(device: EEGDevice | None = None) -> FastAPI:
-    eeg_device = device if device is not None else EEGDevice()
+def create_app(
+    device: EEGDevice | None = None,
+    recorder: MongoRecorder | None = None,
+) -> FastAPI:
+    storage = recorder if recorder is not None else MongoRecorder(
+        os.getenv("MONGODB_URI"), os.getenv("MONGODB_DATABASE", "hackthenest")
+    )
+    eeg_device = device if device is not None else EEGDevice(
+        serial=os.getenv("UNICORN_SERIAL") or None, recorder=storage
+    )
     stream_lock = asyncio.Lock()
-    app = FastAPI(title="Local EEG Stream", version="0.1.0")
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        try:
+            yield
+        finally:
+            try:
+                await asyncio.to_thread(eeg_device.disconnect)
+            finally:
+                await asyncio.to_thread(storage.close)
+
+    app = FastAPI(title="Local EEG Stream", version="0.2.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -22,21 +51,43 @@ def create_app(device: EEGDevice | None = None) -> FastAPI:
     )
 
     @app.get("/api/status")
-    def get_status() -> dict[str, str | None]:
-        return eeg_device.status
+    def get_status() -> dict[str, Any]:
+        return {**eeg_device.status, "storage": storage.status}
 
-    @app.post("/api/device/connect")
-    def connect_device() -> dict[str, str | None]:
+    @app.get("/api/devices")
+    def get_devices() -> dict[str, Any]:
         try:
-            eeg_device.connect()
+            return {"devices": discover_devices()}
         except DeviceConnectionError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
-        return eeg_device.status
+
+    @app.post("/api/device/register")
+    def register_device(selection: DeviceSelection) -> dict[str, str]:
+        try:
+            devices = discover_devices()
+            if selection.serial not in {device["serial"] for device in devices}:
+                raise HTTPException(status_code=404, detail="Device is not paired with this computer")
+            return storage.register(selection.serial)
+        except (DeviceConnectionError, StorageError) as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    @app.post("/api/device/connect")
+    @app.post("/api/acquisition/start")
+    def connect_device(selection: DeviceSelection | None = None) -> dict[str, Any]:
+        try:
+            eeg_device.connect(serial=selection.serial if selection else None)
+        except DeviceConnectionError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        return get_status()
 
     @app.post("/api/device/disconnect")
-    def disconnect_device() -> dict[str, str | None]:
-        eeg_device.disconnect()
-        return eeg_device.status
+    @app.post("/api/acquisition/stop")
+    def disconnect_device() -> dict[str, Any]:
+        try:
+            eeg_device.disconnect()
+        except StorageError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        return get_status()
 
     @app.websocket("/ws/eeg")
     async def stream_eeg(websocket: WebSocket) -> None:
@@ -71,6 +122,7 @@ def create_app(device: EEGDevice | None = None) -> FastAPI:
                     await websocket.close(code=1008)
                     return
 
+                owns_acquisition = eeg_device.status["state"] != "connected"
                 try:
                     await asyncio.to_thread(eeg_device.connect)
                 except DeviceConnectionError as exc:
@@ -78,7 +130,7 @@ def create_app(device: EEGDevice | None = None) -> FastAPI:
                     await websocket.close(code=1011)
                     return
 
-                stream_started = True
+                stream_started = owns_acquisition
                 await websocket.send_json(
                     {
                         "type": "started",
@@ -92,9 +144,10 @@ def create_app(device: EEGDevice | None = None) -> FastAPI:
                 receive_task = asyncio.create_task(websocket.receive_json())
 
                 while True:
-                    frame_task = asyncio.create_task(
-                        asyncio.to_thread(eeg_device.read_frame, 0.25)
-                    )
+                    if frame_task is None:
+                        frame_task = asyncio.create_task(
+                            asyncio.to_thread(eeg_device.read_frame, 0.25)
+                        )
                     done, _ = await asyncio.wait(
                         {receive_task, frame_task},
                         return_when=asyncio.FIRST_COMPLETED,
@@ -118,7 +171,8 @@ def create_app(device: EEGDevice | None = None) -> FastAPI:
                                 isinstance(command, dict)
                                 and command.get("action") == "stop"
                             ):
-                                await asyncio.to_thread(eeg_device.disconnect)
+                                if owns_acquisition:
+                                    await asyncio.to_thread(eeg_device.disconnect)
                                 await websocket.send_json({"type": "stopped"})
                                 break
                             await websocket.send_json(
@@ -159,9 +213,8 @@ def create_app(device: EEGDevice | None = None) -> FastAPI:
                         else:
                             await websocket.send_json(frame)
                         frame_task = None
-                    elif frame_task is not None:
-                        frame_task.cancel()
-                        frame_task = None
+            except StorageError as exc:
+                await websocket.send_json({"type": "error", "message": str(exc)})
             except WebSocketDisconnect:
                 pass
             finally:
@@ -170,7 +223,10 @@ def create_app(device: EEGDevice | None = None) -> FastAPI:
                 if frame_task is not None and not frame_task.done():
                     frame_task.cancel()
                 if stream_started:
-                    await asyncio.to_thread(eeg_device.disconnect)
+                    try:
+                        await asyncio.to_thread(eeg_device.disconnect)
+                    except StorageError as exc:
+                        LOGGER.error("EEG recording finalization failed: %s", exc)
 
     return app
 

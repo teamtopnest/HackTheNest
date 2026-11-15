@@ -18,7 +18,10 @@ class FakeDevice:
             "error": None,
         }
 
-    def connect(self) -> None:
+    def connect(self, serial=None) -> None:
+        self.serial = serial
+        if self.connected:
+            return
         self.connected = True
         self.frames.put(
             {
@@ -103,3 +106,38 @@ def test_websocket_rejects_malformed_json():
         }
 
     assert not device.connected
+
+
+def test_viewer_stop_does_not_stop_http_started_collection():
+    device = FakeDevice()
+    with TestClient(create_app(device)) as client:
+        assert client.post("/api/acquisition/start", json={"serial": "UN-1234"}).status_code == 200
+        assert device.serial == "UN-1234"
+        with client.websocket_connect("/ws/eeg") as websocket:
+            websocket.send_json({"action": "start"})
+            assert websocket.receive_json()["type"] == "started"
+            assert websocket.receive_json()["type"] == "eeg"
+            websocket.send_json({"action": "stop"})
+            assert websocket.receive_json()["type"] == "stopped"
+        assert device.connected
+        assert client.post("/api/acquisition/stop").status_code == 200
+        assert not device.connected
+
+
+def test_shutdown_stops_http_started_collection():
+    device = FakeDevice()
+    with TestClient(create_app(device)) as client:
+        assert client.post("/api/acquisition/start").status_code == 200
+        assert device.connected
+    assert not device.connected
+
+
+def test_discovery_failure_returns_service_error(monkeypatch):
+    def fail():
+        raise DeviceConnectionError("Bluetooth adapter failure")
+
+    monkeypatch.setattr("eeg_stream.app.discover_devices", fail)
+    client = TestClient(create_app(FakeDevice()))
+    response = client.get("/api/devices")
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Bluetooth adapter failure"

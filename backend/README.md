@@ -1,186 +1,157 @@
-# Backend
+# Local Hybrid Black EEG backend
 
-Three pieces share this folder. They are not one process. History is in [CHANGELOG.md](CHANGELOG.md).
+This Windows-local FastAPI service acquires **Unicorn Hybrid Black** EEG using
+`gp.HybridBlack`: eight channels at 250 Hz, in microvolts. It applies a stateful,
+causal order-2 Butterworth **0.5-30 Hz bandpass**, records filtered blocks to
+MongoDB when configured, and optionally streams them over a WebSocket.
+Motion and auxiliary channels are disabled.
 
-| Piece | What it does | Local script |
-| --- | --- | --- |
-| `decoder/` | Causal 0.5–30 Hz filter and shrunk LDA on the S1–S5 MAT files. | `.\backend\scripts\score.ps1` |
-| `eeg_stream/` | g.Pype acquisition from a Unicorn Hybrid Black. Frames are already bandpassed. WebSocket on port 8000. | `.\backend\scripts\stream.ps1` |
-| Ingestion, below | Stores raw MAT samples and triggers in MongoDB. No filtering. | `.\backend\scripts\ingest.ps1` |
+## Hardware prerequisite
 
-The decoder trains on raw samples and applies its own fourth-order filter. `eeg_stream` already filters with a second-order g.Pype bandpass, so those WebSocket frames must not be passed into the decoder. The headset service and the ingestion API cannot both bind port 8000.
+1. Power on the headset and pair it in Windows Bluetooth settings.
+2. Use a supported Bluetooth adapter (preferably the vendor-supplied dongle) and
+   install the applicable g.tec drivers. Close any other recorder using the headset.
+3. Discovery lists **paired** Hybrid Black serials on Windows. It does not pair
+   devices, prove they are powered on, or list arbitrary Bluetooth peripherals.
+   Successful acquisition is the live connectivity check.
 
-Channel order for the recordings and the decoder is Fz, Cz, P3, Pz, P4, PO7, PO8, Oz. The frontend topology section shows a different eight-name set and is not the montage of these files.
+The `Unicorn-BCI-Core-Recorder` folder contains the **BCI Core** recorder manual and
+C# LSL/UDP receiver examples, not the recorder executable or Hybrid Black server.
+Its recorder is installed through g.tec Suite. BCI Core and Hybrid Black are
+different devices: the supplied `gp.BCICore(...)` example is not the source to use
+for a Hybrid Black. This backend talks directly to the headset; do not run a
+vendor recorder against the same headset simultaneously.
 
-## Local commands
+If discovery reports `BLUETOOTH_SOCKET_FAILED` / code 3 ("Couldn't initialize
+Bluetooth lookup service"), the API is running but the native SDK cannot initialize
+Bluetooth. Check the adapter in Device Manager, Bluetooth drivers and pairing;
+verify `Get-Service bthserv` reports Running. A running service alone does not
+guarantee a compatible adapter.
 
-From the repo root in PowerShell. If script execution is disabled for the current window:
+## Install and start
+
+Use 64-bit Python 3.12 (the validated interpreter), from this folder:
 
 ```powershell
-Set-ExecutionPolicy -Scope Process Bypass
-```
-
-Scripts use `HackTheNest\.venv` when it exists, otherwise `backend\.venv`.
-
-```powershell
-# Install once. The repo-root venv is the one the scripts find first.
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
-
-# Score every S*.mat under ..\sources\p300-speller. Prints one AUC per file.
-.\backend\scripts\score.ps1
-
-# Same scorer, one file.
-.\backend\scripts\score.ps1 ..\sources\p300-speller\S1.mat
-
-# Fit an LDA on those files and write backend\model.joblib. That file is gitignored.
-.\backend\scripts\train.ps1
-
-# Headset WebSocket. Pair the Unicorn in Windows Bluetooth first.
-.\backend\scripts\stream.ps1
-
-# MongoDB API. Copy backend\.env.example to backend\.env and fill it in first.
-.\backend\scripts\ingest.ps1
-
-# Decoder unit tests, then the headset tests. Add -Mongo to include ingestion tests.
-.\backend\scripts\test.ps1
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+Copy-Item .env.example .env
 ```
 
-What each service then exposes:
+Edit `.env` locally; it is gitignored. For Atlas, set:
 
-- Decoder score: no server. The script prints `live-replay AUC` and exits.
-- Headset: `http://127.0.0.1:8000`. `GET /api/status`, `POST /api/device/connect`, `POST /api/device/disconnect`, `WS /ws/eeg`. The first WebSocket message must be `{"action":"start"}`.
-- Ingestion: `http://127.0.0.1:8000`. Routes are under `/v1/recordings` and require `Authorization: Bearer <EEG_API_TOKEN>`. Schema docs are at `/docs`.
+```dotenv
+MONGODB_URI=mongodb+srv://<username>:<URL-encoded-password>@<cluster-host>/?retryWrites=true&w=majority
+MONGODB_DATABASE=hackthenest
+UNICORN_SERIAL=
+```
 
-Direct module commands, if you are not using the scripts:
+Use your Atlas hostname, database user and password, not the angle-bracket
+placeholders. Percent-encode reserved characters in username/password (for example
+`@` becomes `%40`). Give the database user read/write permissions for this
+database and allow **your current public IP** in Atlas Network Access. Do not
+commit credentials or paste them into chat. Environment variables override `.env`.
+
+Leave `MONGODB_URI` empty for **streaming only**. When a URI is configured, MongoDB
+must be reachable before acquisition starts; a storage failure does not silently
+fall back to streaming-only mode. Device registration also requires MongoDB.
+
+Start the server:
 
 ```powershell
-python -m backend.decoder.live_decoder ..\sources\p300-speller\S1.mat
-python -m backend.decoder.live_decoder --train ..\sources\p300-speller\S1.mat --output backend\model.joblib
-python backend\run.py
-python -m uvicorn backend.app:app --host 127.0.0.1 --port 8000
+.\.venv\Scripts\python.exe run.py
 ```
 
-# EEG ingestion
+Open `http://127.0.0.1:8000/docs` for the interactive API. Keep a **single server
+process**, bound to loopback (no reload or multiple workers). These local control
+endpoints have no authentication; do not expose the server publicly.
 
-Python 3.10+ backend for historical P300 MAT imports and future eight-electrode batches. The Unicorn WebSocket above is the hardware acquisition path. This service stores samples. Frontend login is not wired to it.
+## Discover, register, collect
 
-## Setup
-
-The scripts in `scripts/` use the repo-root `.venv` when it exists, and `backend\.venv` otherwise. Create the second venv only when you want ingestion isolated from the decoder.
-
-From the repository root in PowerShell:
+In another PowerShell terminal:
 
 ```powershell
-python -m venv backend\.venv
-backend\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
-Copy-Item backend\.env.example backend\.env
+$api = "http://127.0.0.1:8000"
+Invoke-RestMethod "$api/api/devices"
+
+# Replace this with a serial returned above.
+$device = @{ serial = "UN-1234" } | ConvertTo-Json
+Invoke-RestMethod "$api/api/device/register" -Method Post -ContentType "application/json" -Body $device
+Invoke-RestMethod "$api/api/acquisition/start" -Method Post -ContentType "application/json" -Body $device
+Invoke-RestMethod "$api/api/status"
+
+# Stop acquisition, flush queued database writes and finalize the session.
+Invoke-RestMethod "$api/api/acquisition/stop" -Method Post
 ```
 
-Edit the ignored `backend\.env` locally. Never paste passwords into chat or commit them. Set `MONGODB_URI` to your Atlas SRV URI, substituting a **URL-encoded** password, and select `MONGODB_DATABASE`. Set a random `EEG_API_TOKEN` of at least 32 characters and an opaque `EEG_OWNER_ID`. The token authenticates the sender to this API; it is not the database password.
+Registration upserts the paired serial into MongoDB's `devices` collection; it
+does not perform Windows Bluetooth pairing and is optional for acquisition.
+Starting with no JSON body selects `UNICORN_SERIAL` if set, otherwise the only
+paired device. Multiple paired devices require explicit selection.
 
-Atlas/replica-set transactions are required. Allowlist the backend's network address in Atlas. Startup provisions strict validators/indexes, so provisioning permissions are needed; use a dedicated database account and restrict access to this database. Run only one sender process per SQLite queue. Deploy behind HTTPS with request/header timeouts; plain HTTP is allowed by the sender only on loopback.
+- `POST /api/acquisition/start` starts acquisition and database collection
+  **without any WebSocket client**.
+- `POST /api/acquisition/stop` stops/releases the device and flushes recording.
+- `POST /api/device/connect` and `/api/device/disconnect` are compatibility
+  aliases for start/stop, not separate idle connection states.
+- `GET /api/status` reports device state and storage configuration, current/last
+  session ID, confirmed persisted block/sample counts and errors.
+- `WS /ws/eeg`: send `{"action":"start"}` first, then `{"action":"stop"}` to end
+  viewing. Only one viewer is allowed. If HTTP already started collection, viewer
+  stop/disconnect **does not stop collection**; use the HTTP stop endpoint.
+  If the WebSocket starts acquisition itself, viewer stop/disconnect stops it,
+  preserving the original streaming workflow.
+
+If status reports an acquisition or storage error, stop the session, resolve the
+cause and start a new one. No samples for ten seconds is reported as a device
+error rather than remaining apparently connected. Errors are not auto-recovered.
+Ctrl+C performs normal device shutdown and flushes recording.
+
+## Stored data and backpressure
+
+`sessions` contains session UUID, selected serial, channel/rate/unit/filter
+metadata, start/stop UTC times, completion/error state and persisted counts.
+`eeg_blocks` stores one document per filtered 25-sample block, with session ID,
+sample index, sample count, host receive UTC timestamp and a samples-by-8 array.
+A unique `(session_id, sample_index_start)` index separates/order-checks blocks.
+Indices restart at zero for each session. These are **filtered EEG only**, not raw
+EEG, hardware timestamps, battery telemetry or hardware packet-loss measurements.
+`devices` is the serial-keyed device registry.
+
+The 32-block viewer buffer can discard the oldest block; frames report
+`dropped_blocks_total` for **viewer-buffer** loss only. MongoDB receives blocks
+independently, before that buffer, so slow or absent viewers do not lose database
+data. Its separate 64-block recording queue never silently drops on overflow:
+write failure/overflow reports an error and marks the session incomplete when
+finalized. Stop flushes accepted blocks on a healthy database; after a writer
+error, pending unsaved blocks are discarded and the error is retained. No offline
+disk spool or retry/replay is implemented. A forced process kill cannot flush or
+finalize sessions; an interrupted session can remain marked `recording`.
+
+## Why 0.5-30 Hz?
+
+This is a reasonable band for general EEG rhythm work: delta, theta, alpha and
+most beta, with slow drift and higher-frequency muscle/line noise attenuated.
+It excludes gamma/high beta above 30 Hz; choose a different band if the experiment
+requires those. Filtering does not remove all eye/motion/muscle artifacts.
+
+Cutoffs are not brick walls: the amplitude at 0.5 and 30 Hz is about -3 dB, and an
+order-2 filter leaves some 50/60 Hz energy. Separate mains notches are usually
+unnecessary for a 30 Hz upper cutoff, but can be warranted by measured residual
+line noise; neither 50 nor 60 Hz notch is applied by default. The causal filter
+preserves state across blocks but introduces phase delay and startup transients;
+allow several seconds to settle. A Qt `MainApp`/scope is not needed by this
+headless backend.
+
+## Validation
 
 ```powershell
-backend\.venv\Scripts\python.exe -m uvicorn backend.app:app --host 127.0.0.1 --port 8000
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Set `EEG_API_URL=http://127.0.0.1:8000` locally, or your deployed HTTPS API URL. The frontend never connects directly to MongoDB.
-
-## What the supplied files contain
-
-Each S1-S5 file contains `fs=250`, `y` (samples x 8), and aligned `trig` (-1 non-target, 0 no trigger, +1 target). Together: **304,269 samples**, **2,434,152 values**, **1,220 chunks**, **750 target** and **5,250 non-target** markers. All source amplitudes are preserved without filtering or unit conversion.
-
-The supplied montage defines `[Fz, Cz, P3, Pz, P4, PO7, PO8, Oz]`. This is source configuration, not embedded MAT metadata. Do not substitute the frontend's different channel labels. The TVLDA abstract describes the matching eight-channel, 250 Hz Unicorn experiment; the older P300 paper's 256 Hz g.USBamp settings are not applied. The dataset information sheet mentions four subjects, but the overview and files include S5.
-
-**No verified acquisition dates exist in these files.** MATLAB export dates, file modification dates, and import dates must not become recording dates. Units remain `unknown` until supported by evidence.
-
-## Inspect/import
-
-Inspection requires neither dates nor database credentials:
-
-```powershell
-$files = Get-ChildItem 'C:\PATH\TO\p300-speller\S*.mat'
-backend\.venv\Scripts\python.exe -m backend.importer @($files.FullName)
-```
-
-Copy `manifest.example.json` to an ignored `manifest.local.json`. Add entries for every selected file, keyed by exact filename, with a distinct pseudonymous subject ID. Replace each null `recordingStartedAt` with the **verified first-sample timestamp**, including UTC offset; set the original timezone/offset, evidence, and honest clock precision. Starts must align to milliseconds because BSON Date has millisecond precision. Do not leave placeholder timezone/evidence. The example intentionally cannot be imported.
-
-```powershell
-backend\.venv\Scripts\python.exe -m backend.importer @($files.FullName) --manifest backend\manifest.local.json --import-data
-```
-
-Every selected file is preflighted before any write. The importer registers metadata, sends fixed windows (250 samples here, final short tail preserved), reads all samples back to compare every value/trigger/time, and then finalizes. Re-running unchanged files/configuration resumes through duplicate-safe acknowledgments. An error exits nonzero; already acknowledged chunks remain available for retry.
-
-## Standard document contract
-
-`eeg_recordings`: immutable source configuration and time origin, UUID ID, server-authorized owner, pseudonymous subject, source SHA-256, ordered eight labels, rate, units/evidence, device metadata, start time/evidence, ingestion times, lifecycle status, and finalized counts.
-
-`eeg_chunks`: one immutable source-index window, unique `(recordingId, chunkIndex)`, index coverage, actual count, final-window flag, first/last acquisition timestamps, receipt timestamp, missing index ranges, canonical content hash, and samples:
-
-```json
-{
-  "sampleIndex": 1,
-  "timestamp": "2024-01-01T00:00:00.004Z",
-  "offsetNs": 4000000,
-  "values": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
-  "trigger": 0
-}
-```
-
-This timestamp/data is **synthetic illustration only**, not an acquisition date for S1-S5. Value position i maps to recording channel i. Trigger null means the source does not supply triggers; zero means it supplied a no-trigger value.
-
-For a uniform clock, offset is rounded directly from `index * 1e9 / fs`, never accumulated from rounded intervals. `timestamp` is the recording UTC start plus the offset, floored to BSON milliseconds. `offsetNs` is stored as BSON Int64 for precise relative timing; it does not imply an equally precise absolute clock. At 250 Hz, timestamps are exactly 4 ms apart.
-
-For `source_offsets`, acquisition software supplies increasing source indices and elapsed offsets from a verified UTC anchor. Timing is not inferred from network arrival. Missing samples become explicit ranges, including fully missing windows; no zero-filling. Completion requires consistent counts/coverage and explicit permission for gaps.
-
-Rate is bounded to **2000 Hz**, payload/BSON size to **1 MiB**, and each sample to exactly eight finite floating values. Larger configurations are rejected explicitly. Existing recordings cannot change channel order, rate, time origin, or units; use a new recording revision.
-
-MongoDB enforces BSON types and required document structure. Cross-document ownership, clock relationships, window coverage and completion are validated in Python. Transactions update recording revision alongside inserts/finalization, serializing concurrent writes. Exact retries succeed; different content under the same recording/chunk key returns 409. Recording completion does not permit new chunks, but acknowledges existing identical retries. No TTL deletion is configured.
-
-## API
-
-All routes require `Authorization: Bearer <EEG_API_TOKEN>`. Owner comes only from server configuration; clients provide a pseudonymous subject, not an arbitrary owner.
-
-- `POST /v1/recordings`: `Recording` schema, including retry-stable UUID.
-- `POST /v1/recordings/{id}/chunks`: `{"chunkIndex": 0, "finalWindow": false, "samples": [...]}`.
-- `POST /v1/recordings/{id}/complete`: `expectedSampleCount`, `expectedLastSampleIndex`, optional `allowGaps` (false by default).
-- `GET /v1/recordings?after=<id>&limit=20`: ID-ordered pagination.
-- `GET /v1/recordings/{id}/samples?after=-1&limit=500`: source-index pagination; optional timezone-aware `start` inclusive / `end` exclusive.
-
-Sample responses include `nextAfter`; pass it as `after` until it is null. Maximum page size is 2000 samples (100 recordings). Validation: 422; oversized body: 413; unauthorized: 401; missing/cross-owner recording: 404; conflicting retry/closed recording: 409; Mongo failure: 503. API validation errors do not echo raw signal inputs. Interactive schema docs are at `/docs`.
-
-## Live sender
-
-Existing acquisition software constructs a validated `Recording` with source kind `live`, actual rate/channels/units, verified first-sample UTC time, and timestamp derivation. Construct `Sample` objects with real source indices and offsets; do not supply server receipt timestamps.
-
-```python
-from pathlib import Path
-from backend.sender import ApiClient, LiveSender
-
-# recording and samples come from your acquisition adapter; secrets come from env.
-sender = LiveSender(api, recording, Path("backend") / "live.sqlite3")
-try:
-    sender.feed(samples)
-    sender.drain()
-    # At the actual end of acquisition:
-    sender.finish()
-finally:
-    sender.close()
-```
-
-Feed continuously and call `drain()` regularly. A window is sealed when the next window begins; `finish()` seals the last one. SQLite persists both the partial buffer and unacknowledged windows, including across restarts. Reopen the same queue with identical recording metadata to resume. Feed is incremental: samples before a raised error may already be durably accepted; resume after its saved last source index, never blindly replay the whole feed iterable.
-
-The default pending-data capacity is 16 MiB. Exhaustion raises `BufferError`, requiring acquisition backpressure or a surfaced failure, never silent dropping. Protect the queue file and its directory with local access permissions: it contains sensitive raw EEG, but never tokens/passwords. Delete only the specific recording's queue after confirmed completion according to your retention policy.
-
-## Tests
-
-`.\backend\scripts\test.ps1` runs the decoder unit tests and the headset-stream tests. `.\backend\scripts\test.ps1 -Mongo` also runs the ingestion tests. The MongoDB integration test still needs `EEG_TEST_MONGODB_URI`.
-
-```powershell
-.\.venv\Scripts\python.exe -m pytest backend\tests -q
-```
-
-Unit/API/sender tests use synthetic times, not fabricated historical metadata. For real BSON/index/transaction tests, configure `EEG_TEST_MONGODB_URI` locally to a **test** Atlas/replica-set deployment. The integration fixture creates and deletes only its uniquely named `eeg_test_<uuid>` database. Integration tests skip explicitly when this variable is absent.
-
-Historical production imports require verified recording dates and a reachable configured API/database; passing unit tests is not evidence that an Atlas import succeeded.
+Tests cover device selection/discovery errors, lifecycle, standalone collection,
+MongoDB document writes/session finalization and explicit failure/backpressure
+(with an injected client), plus the actual g.Pype filter's cutoff response, drift
+rejection and continuity across blocks. Real Bluetooth acquisition and Atlas
+connectivity still require the paired hardware and valid local credentials.

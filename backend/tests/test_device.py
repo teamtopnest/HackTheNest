@@ -5,7 +5,7 @@ from queue import Empty
 import numpy as np
 import pytest
 
-from eeg_stream.device import DeviceConnectionError, EEGDevice
+from eeg_stream.device import DeviceConnectionError, EEGDevice, discover_devices
 
 
 class FakePipeline:
@@ -55,6 +55,12 @@ def install_fake_gpype(monkeypatch, pipeline):
         Pipeline=FakePipelineFactory,
     )
     monkeypatch.setitem(sys.modules, "gpype", fake_gpype)
+    monkeypatch.setitem(
+        sys.modules, "gtec_unicorn",
+        types.SimpleNamespace(
+            Amplifier=types.SimpleNamespace(get_connected_devices=lambda: ["UN-1234"])
+        ),
+    )
 
 
 def test_pipeline_uses_eight_channel_source_and_bandpass(monkeypatch):
@@ -69,6 +75,7 @@ def test_pipeline_uses_eight_channel_source_and_bandpass(monkeypatch):
     source, bandpass = pipeline.connections[0]
     assert source.kwargs == {
         "serial": "UN-1234",
+        "frame_size": 25,
         "include_accel": False,
         "include_gyro": False,
         "include_aux": False,
@@ -156,3 +163,41 @@ def test_read_frame_times_out_when_no_samples_are_available():
 
     with pytest.raises(Empty):
         device.read_frame(timeout=0.01)
+
+
+def test_discovery_does_not_hide_sdk_errors(monkeypatch):
+    def fail():
+        raise OSError("Bluetooth adapter failure")
+
+    monkeypatch.setitem(
+        sys.modules, "gtec_unicorn",
+        types.SimpleNamespace(Amplifier=types.SimpleNamespace(get_connected_devices=fail)),
+    )
+    with pytest.raises(DeviceConnectionError, match="discovery failed"):
+        discover_devices()
+
+
+def test_automatic_selection_rejects_multiple_paired_devices(monkeypatch):
+    pipeline = FakePipeline()
+    install_fake_gpype(monkeypatch, pipeline)
+    sys.modules["gtec_unicorn"].Amplifier.get_connected_devices = lambda: ["UN-1", "UN-2"]
+    device = EEGDevice()
+    with pytest.raises(DeviceConnectionError, match="select a serial"):
+        device.connect()
+    assert not pipeline.started
+    device.connect(serial="UN-2")
+    assert pipeline.connections[0][0].kwargs["serial"] == "UN-2"
+    with pytest.raises(DeviceConnectionError, match="Disconnect"):
+        device.connect(serial="UN-1")
+    device.disconnect()
+
+
+def test_missing_data_changes_acquisition_status(monkeypatch):
+    clock = [100.0]
+    monkeypatch.setattr("eeg_stream.device.time.monotonic", lambda: clock[0])
+    device = EEGDevice(pipeline_factory=lambda _: FakePipeline())
+    device.connect()
+    clock[0] += 11
+    assert device.status["state"] == "error"
+    assert "No EEG data" in device.status["error"]
+    device.disconnect()

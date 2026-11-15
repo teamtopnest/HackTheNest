@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { base44 } from '@/api/base44Client';
 import SectionHeader from '@/components/SectionHeader';
 
 const TYPES = ['Investor', 'Partner', 'Research', 'Clinic'];
@@ -8,8 +7,7 @@ const EMPTY = { inquiry_type: 'Investor', full_name: '', email: '', organization
 
 export default function AccessForm() {
   const [form, setForm] = useState(EMPTY);
-  const [status, setStatus] = useState('idle');
-  const [error, setError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
 
   const update = (field) => (event) => {
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
@@ -17,23 +15,7 @@ export default function AccessForm() {
 
   const submit = async (event) => {
     event.preventDefault();
-    setError('');
-    setStatus('sending');
-    try {
-      await base44.entities.AccessRequest.create({
-        inquiry_type: form.inquiry_type,
-        full_name: form.full_name.trim(),
-        email: form.email.trim(),
-        organization: form.organization.trim(),
-        message: form.message.trim(),
-        status: 'new',
-      });
-      setStatus('sent');
-      setForm(EMPTY);
-    } catch (err) {
-      setStatus('idle');
-      setError(err?.message || 'Transmission failed. Try again.');
-    }
+    setSubmitted(true);
   };
 
   const fieldClass =
@@ -52,27 +34,10 @@ export default function AccessForm() {
 
         <div className="mt-12 grid grid-cols-1 gap-px bg-white/10 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
           <div className="bg-[#080808] p-6 sm:p-9">
-            {status === 'sent' ? (
-              <div className="flex min-h-[380px] flex-col justify-center">
-                <span className="mono-label text-[#00FF41]">Transmission complete</span>
-                <p className="mono mt-5 text-lg leading-relaxed text-[#F2F2F2]">
-                  &gt; REQUEST_LOGGED_
-                  <span className="caret ml-0.5 inline-block h-[1em] w-[0.5em] translate-y-[0.12em] bg-[#0057FF]" aria-hidden="true" />
-                </p>
-                <p className="mt-4 max-w-sm text-sm leading-relaxed text-[#F2F2F2]/55">
-                  Your details are in the queue. Expect a reply within two business days with the brief
-                  and next steps.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setStatus('idle')}
-                  className="focus-ring mt-8 w-fit border border-[#F2F2F2]/25 px-5 py-2.5 mono-label text-[#F2F2F2] transition-colors duration-300 hover:border-[#0057FF] hover:bg-[#0057FF] hover:text-white"
-                >
-                  Send another
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={submit} className="flex flex-col gap-7">
+            <p className="mono-label mb-7 border border-[#C5A059]/30 p-3 text-[#C5A059]" role="note">
+              Preview only — this form does not send or store submissions.
+            </p>
+            <form onSubmit={submit} className="flex flex-col gap-7">
                 <div>
                   <span className="mono-label text-[#F2F2F2]/40">&gt; Initialize_connection? [select]</span>
                   <div className="mt-3 grid grid-cols-2 gap-px bg-white/10 sm:grid-cols-4">
@@ -142,27 +107,25 @@ export default function AccessForm() {
                   />
                 </label>
 
-                {error ? (
-                  <p className="mono-label text-[#FF5A5A]" role="alert">
-                    {error}
+                {submitted ? (
+                  <p className="mono-label text-[#C5A059]" role="status">
+                    Demo only: no request was sent or saved.
                   </p>
                 ) : null}
 
                 <div className="flex flex-col items-start gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
                   <span className="mono-label text-[#F2F2F2]/25">
-                    {status === 'sending' ? 'Transmitting…' : 'Encrypted · reviewed by founders'}
+                    Demo form · no data is transmitted
                   </span>
                   <button
                     type="submit"
-                    disabled={status === 'sending'}
                     className="focus-ring inline-flex items-center gap-3 border border-[#F2F2F2] px-6 py-3.5 mono-label text-[#F2F2F2] transition-colors duration-300 hover:bg-[#F2F2F2] hover:text-[#050505] disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    {status === 'sending' ? 'Sending' : 'Transmit request'}
+                    Preview form
                     <span aria-hidden="true">→</span>
                   </button>
                 </div>
-              </form>
-            )}
+            </form>
           </div>
 
           <div className="flex flex-col justify-between gap-8 bg-[#050505] p-6 sm:p-9">
@@ -190,7 +153,7 @@ export default function AccessForm() {
               </ul>
             </div>
             <p className="text-xs leading-relaxed text-[#F2F2F2]/35">
-              We do not sell or share submitted details. Requests are read by the founding team only.
+              Do not enter real personal information: this preview is not connected to a secure submission service.
             </p>
           </div>
         </div>
