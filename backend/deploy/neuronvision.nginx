@@ -1,0 +1,54 @@
+limit_req_zone $binary_remote_addr zone=neuronvision_speech:10m rate=10r/m;
+
+server {
+    listen 80;
+    server_name neuronvision.us www.neuronvision.us;
+    root /opt/hackthenest/app/app/dist;
+    index index.html;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+        add_header Cache-Control no-cache;
+    }
+
+    location /assets/ {
+        try_files $uri =404;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    location ~ /\. {
+        deny all;
+    }
+}
+
+server {
+    listen 80;
+    server_name api.neuronvision.us;
+    client_max_body_size 1m;
+    server_tokens off;
+
+    add_header X-Content-Type-Options nosniff always;
+
+    location = /api/demo/speech {
+        if ($scheme != https) { return 426; }
+        limit_req zone=neuronvision_speech burst=3 nodelay;
+        limit_req_status 429;
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_read_timeout 30s;
+    }
+
+    location / {
+        if ($scheme != https) { return 426; }
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $remote_addr;
+    }
+}

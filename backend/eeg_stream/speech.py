@@ -6,9 +6,15 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from fastapi import HTTPException
+from pydantic import BaseModel, Field, StrictInt
 
 MENU_PATH = Path(__file__).resolve().parents[2] / "app" / "src" / "lib" / "communication-menu.json"
 MAX_AUDIO_BYTES = 8 * 1024 * 1024
+
+
+class DemoSpeechSelection(BaseModel):
+    path: list[StrictInt] = Field(min_length=1, max_length=3)
+
 
 MOVE_PHRASES = {
     "Outside": "I want to go outside.",

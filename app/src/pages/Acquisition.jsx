@@ -12,6 +12,8 @@ import { COMMUNICATION_MENU, getFlashingRounds, getMenuPath } from '../lib/commu
 import Calibration from '../components/Calibration';
 
 const API_URL = (import.meta.env.VITE_EEG_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
+const CLOUD_SPEECH = Boolean(import.meta.env.VITE_EEG_SPEECH_API_URL);
+const SPEECH_API_URL = (import.meta.env.VITE_EEG_SPEECH_API_URL || API_URL).replace(/\/$/, '');
 const HEADSETS = [
   { id: 'core-4', name: 'BCI Core-4', family: 'Unicorn series', channels: '4 EEG channels', connection: 'Bluetooth Low Energy', image: core4Image },
   { id: 'hybrid-black', name: 'Hybrid Black', family: 'Unicorn series', channels: '8 EEG channels', connection: 'Bluetooth', image: hybridBlackImage },
@@ -150,6 +152,7 @@ export default function Acquisition() {
   const [demoAverages, setDemoAverages] = useState({});
   const [speechEnabled, setSpeechEnabled] = useState(true);
   const [speechError, setSpeechError] = useState('');
+  const [speechToken, setSpeechToken] = useState('');
   const socketRef = useRef(null);
   const demoTimerRef = useRef(null);
   const demoExperimentRef = useRef(null);
@@ -417,6 +420,10 @@ export default function Acquisition() {
 
   useEffect(() => {
     if (!speechEnabled || !checked?.simulated || !demoResult?.choice || phase !== 'collecting' || pathname !== '/acquisition/workspace' || spokenResultRef.current === demoResult) return;
+    if (CLOUD_SPEECH && !speechToken.trim()) {
+      setSpeechError('Enter the cloud demo speech access token before starting flashing.');
+      return;
+    }
     const menuPath = getMenuPath(COMMUNICATION_MENU, menu);
     const choiceIndex = menu.children.findIndex((item) => item.label === demoResult.choice);
     if (!menuPath || choiceIndex < 0) {
@@ -430,9 +437,12 @@ export default function Acquisition() {
     speechAbortRef.current = controller;
     async function speak() {
       try {
-        const response = await fetch(`${API_URL}/api/demo/speech`, {
+        const response = await fetch(`${SPEECH_API_URL}/api/demo/speech`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(CLOUD_SPEECH && { Authorization: `Bearer ${speechToken.trim()}` }),
+          },
           body: JSON.stringify({ path: [...menuPath, choiceIndex] }),
           signal: controller.signal,
         });
@@ -456,7 +466,7 @@ export default function Acquisition() {
       }
     }
     speak();
-  }, [demoResult, speechEnabled, checked, menu, phase, pathname]);
+  }, [demoResult, speechEnabled, checked, menu, phase, pathname, speechToken]);
 
   useEffect(() => {
     if (phase === 'collecting' && pathname === '/acquisition/workspace') {
@@ -513,6 +523,13 @@ export default function Acquisition() {
                   {speechEnabled ? 'Disable demo speech' : 'Enable demo speech'}
                 </button>
                 {speechEnabled && <p className="text-xs text-white/50">Synthetic menu phrases are sent to ElevenLabs for speech.</p>}
+                {CLOUD_SPEECH && speechEnabled && (
+                  <label className="w-full text-xs text-white/65">
+                    Cloud demo speech access token
+                    <input type="password" autoComplete="off" value={speechToken} onChange={(event) => { cancelSpeech(); setSpeechToken(event.target.value); setSpeechError(''); }} className="focus-ring mt-2 block w-full border border-white/20 bg-transparent p-3 text-white" />
+                    <span className="mt-2 block text-white/40">Use the server's EEG_DEMO_TOKEN, not the ElevenLabs API key. Kept in memory only.</span>
+                  </label>
+                )}
               </div>
             )}
             {error && <p role="alert" className="mt-4 text-sm text-red-300">{error}</p>}

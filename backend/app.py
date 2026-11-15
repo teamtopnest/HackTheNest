@@ -9,13 +9,15 @@ from uuid import UUID
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pymongo.errors import PyMongoError
 from starlette.concurrency import run_in_threadpool
 
 from backend.schemas import Chunk, Completion, MAX_BODY_BYTES, Recording
 from backend.storage import Conflict, MongoStore, NotFound
+from backend.eeg_stream.speech import DemoSpeechSelection, synthesize_demo_speech
 
 
 logger = logging.getLogger(__name__)
@@ -53,9 +55,18 @@ class BodyLimit:
 
 
 def create_app(store=None, token: str | None = None, owner: str | None = None):
+    load_dotenv(Path(__file__).with_name(".env.local"))
+    load_dotenv(Path(__file__).with_name(".env"))
+    origins = [
+        origin.strip() for origin in os.environ.get(
+            "EEG_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
+        ).split(",") if origin.strip()
+    ]
+    if "*" in origins:
+        raise ValueError("EEG_ALLOWED_ORIGINS must list explicit browser origins")
+
     @asynccontextmanager
     async def lifespan(app):
-        load_dotenv(Path(__file__).with_name(".env"))
         app.state.token = token or os.environ.get("EEG_API_TOKEN")
         app.state.owner = owner or os.environ.get("EEG_OWNER_ID")
         if not app.state.token or len(app.state.token) < 32 or not app.state.owner:
@@ -76,8 +87,14 @@ def create_app(store=None, token: str | None = None, owner: str | None = None):
         finally:
             await run_in_threadpool(app.state.store.close)
 
-    app = FastAPI(title="EEG ingestion", version="1", lifespan=lifespan)
+    app = FastAPI(title="NeuronVision cloud API", version="1", lifespan=lifespan)
     app.add_middleware(BodyLimit)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
 
     def authorized(request: Request,
                    credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
@@ -86,6 +103,29 @@ def create_app(store=None, token: str | None = None, owner: str | None = None):
         ):
             raise HTTPException(401, "Valid ingestion token required")
         return request.app.state.owner
+
+    def speech_authorized(
+        credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
+    ):
+        speech_token = os.environ.get("EEG_DEMO_TOKEN", "")
+        if len(speech_token) < 32 or speech_token.startswith("REPLACE_"):
+            raise HTTPException(503, "Configure the server's EEG_DEMO_TOKEN for demo speech")
+        if credentials is None or not hmac.compare_digest(
+            credentials.credentials.encode("utf-8"), speech_token.encode("utf-8")
+        ):
+            raise HTTPException(401, "A valid demo speech access token is required")
+
+    @app.get("/health")
+    def health():
+        return {"status": "ok"}
+
+    @app.post("/api/demo/speech")
+    def demo_speech(selection: DemoSpeechSelection, access=Depends(speech_authorized)):
+        return Response(
+            content=synthesize_demo_speech(selection.path),
+            media_type="audio/mpeg",
+            headers={"Cache-Control": "no-store"},
+        )
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request(request, exc):

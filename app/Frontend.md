@@ -91,6 +91,52 @@ for real patient choices or enter patient information. Live acquisition does
 not trigger speech. The local backend is unauthenticated and is not suitable
 for public exposure.
 
+### Vultr frontend and cloud API
+
+The cloud service is `backend.app:app`, not the Bluetooth service
+`eeg_stream.app:app`. Install `backend/requirements-cloud.txt` on Ubuntu; it
+does not install the Windows headset drivers or g.Pype. The cloud service
+supports authenticated ingestion, `/health`, and authenticated synthetic demo
+speech. Live headset acquisition still runs locally and is not yet bridged
+to cloud ingestion.
+
+Copy `backend/deploy/backend.env.example` to
+`/etc/hackthenest/backend.env` on the server and replace placeholders privately.
+Use rotated credentials. Generate two different random tokens of at least
+32 characters: `EEG_API_TOKEN` for ingestion and `EEG_DEMO_TOKEN` for browser
+demo speech. Never put either token, the database URI, or ElevenLabs key in a
+`VITE_` variable. `EEG_ALLOWED_ORIGINS` is a comma-separated list of exact
+frontend origins. The service requires MongoDB connectivity at startup.
+
+Build the frontend with `VITE_EEG_SPEECH_API_URL=https://api.neuronvision.us`.
+Keep `VITE_EEG_API_URL` pointing to loopback for local acquisition; do not
+point headset discovery requests to Vultr. Enter `EEG_DEMO_TOKEN` in the
+workspace's **Cloud demo speech access token** field. It remains in React
+memory only and must be re-entered after a reload; it cannot access ingestion.
+
+Deploy the backend package, the shared
+`app/src/lib/communication-menu.json`, and `app/dist` to
+`/opt/hackthenest/app`. Do not upload `.env` files, virtual environments, caches
+or the repository's full Git directory. Create a Python virtual environment
+at `/opt/hackthenest/venv`, then install the cloud requirements. Install
+`backend/deploy/neuronvision.service` as the systemd unit and
+`backend/deploy/neuronvision.nginx` as an enabled Nginx site. These expect an
+unprivileged `hackthenest` account and a root-owned environment file readable
+by its group. The API listens only on `127.0.0.1:8000`.
+
+Point root and `api` A records to Vultr and `www` CNAME to the root domain.
+After installing the Nginx site, obtain certificates with Certbot's Nginx
+plugin for all three names and enable HTTP-to-HTTPS redirects. The API proxy
+rejects plaintext requests until HTTPS is available. The speech endpoint is
+limited to 10 requests/minute per IP with a burst of 3 at Nginx.
+
+Validate the service with `https://api.neuronvision.us/health`, confirm
+unauthenticated speech requests return 401, and test the hosted demo.
+Browser autoplay policy may still require **Play speech**. Hosted real
+headset acquisition additionally needs an authenticated local bridge and
+browser local-network permissions; the cloud deployment alone does not
+enable it.
+
 In the demo workspace, **Start flashing** opts into visual flashing (a one-line
 reminder to stop if uncomfortable stays next to the button). The demo randomly
 chooses an attended item and adds synthetic event-related responses to noisy
