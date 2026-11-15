@@ -4,6 +4,34 @@ Use this repository to run and edit the app locally, then publish changes back t
 
 Any change pushed to the repo will also be reflected in the Base44 Builder.
 
+## Standalone Frontend Preview
+
+The current landing page is configured as a frontend-only Vite app. Its inquiry form is a visual demo and does not transmit or store information. Do not enter real personal information until a production submission service is connected.
+
+From the `app` directory:
+
+```bash
+npm install
+npm run dev
+```
+
+Open the local URL printed by Vite (typically `http://localhost:5173`). Create a production build with:
+
+```bash
+npm run build
+npm run preview
+```
+
+## Host on Vercel
+
+1. Import the Git repository into Vercel and set the project **Root Directory** to `app`.
+2. Select the Vite framework preset, use `npm install` as the install command, `npm run build` as the build command, and `dist` as the output directory.
+3. Deploy the site and add your domain in the Vercel project’s **Settings → Domains**.
+4. At the DNS provider authoritative for the domain (GoDaddy or Porkbun, whichever currently hosts its DNS), add the records Vercel displays. Do not change nameservers or existing records unless Vercel specifically instructs you to; DNS changes can interrupt other services using the domain.
+5. Wait for Vercel to verify DNS and issue HTTPS, then test the domain on desktop and mobile.
+
+This static hosting setup does not deploy the Python backend or connect the inquiry form to Base44. Keep the existing Base44 publishing instructions below only if you later choose to use that platform.
+
 ## Prerequisites
 
 1. Clone the repository using the project's Git URL.
