@@ -25,7 +25,7 @@ const STEPS = [
 
 export default function Pipeline() {
   return (
-    <section id="pipeline" className="relative border-t border-white/10 bg-[#050505] py-[clamp(64px,9vw,120px)]">
+    <section id="pipeline" className="relative border-t border-white/10 bg-[#07111B] py-[clamp(64px,9vw,120px)]">
       <div className="mx-auto max-w-[1400px] px-[clamp(20px,5vw,64px)]">
         <SectionHeader
           index="05"
@@ -36,13 +36,13 @@ export default function Pipeline() {
 
         <div className="mt-12 grid grid-cols-1 gap-px bg-white/10 md:grid-cols-2 xl:grid-cols-4">
           {STEPS.map((step) => (
-            <div key={step.id} className="group relative bg-[#050505] p-6 sm:p-8">
-              <span className="absolute left-0 top-0 h-px w-0 bg-[#0057FF] transition-all duration-500 group-hover:w-full" aria-hidden="true" />
-              <span className="mono-label text-[#0057FF]">{step.id}</span>
-              <h3 className="mt-6 font-heading text-2xl font-semibold tracking-tight text-[#F2F2F2]">
+            <div key={step.id} className="group relative bg-[#07111B] p-6 sm:p-8">
+              <span className="absolute left-0 top-0 h-px w-0 bg-[#0369A1] transition-all duration-500 group-hover:w-full" aria-hidden="true" />
+              <span className="mono-label text-[#38BDF8]">{step.id}</span>
+              <h3 className="mt-6 font-heading text-2xl font-semibold tracking-tight text-[#F8FAFC]">
                 {step.title}
               </h3>
-              <p className="mt-3 text-sm leading-relaxed text-[#F2F2F2]/55">{step.body}</p>
+              <p className="mt-3 text-sm leading-relaxed text-[#F8FAFC]/55">{step.body}</p>
             </div>
           ))}
         </div>

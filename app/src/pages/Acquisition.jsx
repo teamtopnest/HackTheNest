@@ -94,7 +94,7 @@ function SignalPanel({ device, samples, lastFrame, demoTarget, markers, endIndex
             <p className="mono-label text-[#00FF87]"><span className="live-dot mr-2 inline-block h-1.5 w-1.5 rounded-full bg-[#00FF87]" />{device.simulated ? 'Simulated signal' : 'Live signal'}</p>
             <p className="mt-2 text-xs text-white/45">{device.channel_count} channels · {device.sampling_rate_hz} Hz · {device.unit}</p>
           </div>
-          <Activity size={20} className="text-[#0057FF]" aria-hidden="true" />
+          <Activity size={20} className="text-[#38BDF8]" aria-hidden="true" />
         </div>
         <p className="mt-3 text-xs text-white/40">{device.simulated ? 'Synthetic demo data' : 'Filtered 0.5–30 Hz'} · auto-scaled traces</p>
         {device.simulated && demoTarget && <p className="mt-3 text-xs text-amber-200">Simulated attended item: <strong>{demoTarget}</strong></p>}
@@ -404,9 +404,9 @@ export default function Acquisition() {
   }, [pathname, collecting, phase, navigate]);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-[#F2F2F2]">
+    <div className="min-h-screen bg-[#07111B] text-[#F8FAFC]">
       <header className="flex h-[72px] items-center justify-between border-b border-white/10 px-[clamp(20px,4vw,48px)]">
-        <Link to="/" className="focus-ring mono-label text-white">EEG <span className="text-[#0057FF]">/</span> Neurotec</Link>
+        <Link to="/" className="focus-ring mono-label text-white">NeuronVision</Link>
         <Link to="/" className="focus-ring flex items-center gap-2 text-xs text-white/50 hover:text-white"><ArrowLeft size={14} /> Back to home</Link>
       </header>
 
@@ -416,7 +416,7 @@ export default function Acquisition() {
           <section aria-label="Communication menu" className="flex min-w-0 flex-col px-6 py-8 xl:px-8">
             <div className="flex flex-wrap items-start justify-between gap-5">
               <div>
-                <p className="mono-label text-[#0057FF]">{checked.simulated ? 'Demo mode' : 'Acquisition'} / {checked.model}</p>
+                <p className="mono-label text-[#38BDF8]">{checked.simulated ? 'Demo mode' : 'Acquisition'} / {checked.model}</p>
                 <h1 className="mt-4 font-heading text-3xl font-semibold tracking-tight sm:text-4xl">Signal workspace</h1>
                 {!checked.simulated && <p className="mt-3 max-w-xl text-sm leading-6 text-white/50">Live filtered EEG is being recorded. This workspace is an interface preview, not a communication or medical device.</p>}
               </div>
@@ -432,12 +432,12 @@ export default function Acquisition() {
             )}
             {checked.simulated && (
               <div className="mt-8 flex flex-wrap items-center gap-5 border border-white/15 p-4">
-                <button type="button" onClick={flashing ? stopDemoFlashing : () => changeMenu(menu, true)} className="focus-ring border border-[#5283ff] px-5 py-3 text-sm text-white hover:bg-[#0057FF]/20">
+                <button type="button" onClick={flashing ? stopDemoFlashing : () => changeMenu(menu, true)} className="focus-ring border border-[#7dd3fc] px-5 py-3 text-sm text-white hover:bg-[#075985]/20">
                   {flashing ? 'Stop flashing' : 'Start flashing'}
                 </button>
                 <div className="min-w-[180px] flex-1">
                   <div className="flex justify-between text-xs text-white/55"><span>Flashes · {flashingRounds} rounds</span><span>{demoProgress} / {menuItems.length * flashingRounds}</span></div>
-                  <div className="mt-2 h-1.5 bg-white/10"><div className="h-full bg-[#0057FF] transition-all" style={{ width: `${(demoProgress / (menuItems.length * flashingRounds)) * 100}%` }} /></div>
+                  <div className="mt-2 h-1.5 bg-white/10"><div className="h-full bg-[#0369A1] transition-all" style={{ width: `${(demoProgress / (menuItems.length * flashingRounds)) * 100}%` }} /></div>
                 </div>
                 <p className="w-full text-[0.65rem] text-white/35">Flashing stimulus—stop if uncomfortable.</p>
               </div>
@@ -453,7 +453,7 @@ export default function Acquisition() {
                 const lit = highlighted === item;
                 const evidence = demoEvidence[item];
                 return (
-                  <button key={item} disabled={flashing} onClick={() => node.children && changeMenu(node)} className={`focus-ring flex min-h-[140px] flex-col border p-5 text-left transition-colors duration-75 ${lit ? 'border-[#7da5ff] bg-[#0057FF] text-white' : 'border-white/10 bg-white/[0.02] hover:border-[#0057FF]'}`}>
+                  <button key={item} disabled={flashing} onClick={() => node.children && changeMenu(node)} className={`focus-ring flex min-h-[140px] flex-col border p-5 text-left transition-colors duration-75 ${lit ? 'border-[#bae6fd] bg-[#0369A1] text-white' : 'border-white/10 bg-white/[0.02] hover:border-[#38BDF8]'}`}>
                     <span className="flex items-center justify-between gap-2 font-heading text-2xl font-semibold">{item}{node.children && <ChevronRight size={18} className={lit ? 'text-white' : 'text-white/30'} />}</span>
                     {checked.simulated && (
                       <>
@@ -511,8 +511,8 @@ export default function Acquisition() {
       ) : (
         <main className="mx-auto max-w-[1400px] px-[clamp(20px,5vw,64px)] pb-20 pt-12 sm:pt-20">
           <div className="max-w-3xl">
-            <p className="mono-label text-[#0057FF]">01 / Device setup</p>
-            <h1 className="mt-5 font-heading text-4xl font-semibold tracking-tight sm:text-6xl">Start acquisition<span className="text-[#0057FF]">.</span></h1>
+            <p className="mono-label text-[#38BDF8]">01 / Device setup</p>
+            <h1 className="mt-5 font-heading text-4xl font-semibold tracking-tight sm:text-6xl">Start acquisition<span className="text-[#38BDF8]">.</span></h1>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-white/50 sm:text-base">Choose your headset, check its connection, and start collecting filtered EEG. The acquisition service must run on the computer connected to the headset.</p>
           </div>
           <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,1.7fr)_minmax(300px,1fr)]">
@@ -529,9 +529,9 @@ export default function Acquisition() {
                     disabled={busy}
                     onClick={() => selectModel(headset.id)}
                     aria-pressed={model === headset.id}
-                    className={`focus-ring overflow-hidden border bg-white p-5 text-left text-[#111] transition-colors disabled:opacity-50 ${model === headset.id ? 'border-[#0057FF] ring-2 ring-[#0057FF]' : 'border-white hover:border-[#0057FF]'}`}
+                    className={`focus-ring overflow-hidden border bg-white p-5 text-left text-[#111] transition-colors disabled:opacity-50 ${model === headset.id ? 'border-[#38BDF8] ring-2 ring-[#38BDF8]' : 'border-white hover:border-[#38BDF8]'}`}
                   >
-                    <span className="flex justify-between mono-label text-[0.55rem] text-black/50">{headset.family}{model === headset.id && <Check size={16} className="text-[#0057FF]" />}</span>
+                    <span className="flex justify-between mono-label text-[0.55rem] text-black/50">{headset.family}{model === headset.id && <Check size={16} className="text-[#38BDF8]" />}</span>
                     <img src={headset.image} alt="" className="mx-auto mt-3 h-40 w-full object-contain" />
                     <span className="mt-4 block font-heading text-lg font-semibold">{headset.name}</span>
                     <span className="mt-2 block text-xs text-black/55">{headset.channels} · {headset.connection}</span>
@@ -541,9 +541,9 @@ export default function Acquisition() {
               <p className="mt-4 text-xs leading-5 text-white/35">Core and g.Nautilus adapters are experimental and require hardware validation. g.Nautilus variants are user-selected, not independently identified.</p>
             </section>
             <section className="h-fit border border-white/10 bg-[#0a0a0b] p-6 sm:p-8">
-              <p className="mono-label text-[#0057FF]">02 / Connection</p>
+              <p className="mono-label text-[#38BDF8]">02 / Connection</p>
               <h2 className="mt-4 font-heading text-xl font-semibold">Connect your device</h2>
-              <button type="button" disabled={busy} aria-pressed={demo} onClick={() => { setDemo(!demo); setChecked(null); setError(''); }} className={`focus-ring mt-5 w-full border px-4 py-3 text-sm disabled:opacity-50 ${demo ? 'border-[#0057FF] bg-[#0057FF]/15 text-white' : 'border-white/20 text-white hover:border-white'}`}>
+              <button type="button" disabled={busy} aria-pressed={demo} onClick={() => { setDemo(!demo); setChecked(null); setError(''); }} className={`focus-ring mt-5 w-full border px-4 py-3 text-sm disabled:opacity-50 ${demo ? 'border-[#38BDF8] bg-[#0369A1]/15 text-white' : 'border-white/20 text-white hover:border-white'}`}>
                 {demo ? 'Demo mode on — switch off' : 'Demo mode'}
               </button>
               {demo && <p role="status" className="mt-3 text-xs leading-5 text-amber-200">Demo mode bypasses the headset and shows synthetic data only. No data is sent to the backend or database.</p>}
@@ -574,7 +574,7 @@ export default function Acquisition() {
               </button>
               {checked && <p role="status" className="mt-4 flex gap-2 text-xs leading-5 text-[#00FF87]"><Check size={15} className="shrink-0" /> Device check passed. The connection will reopen when collection starts.</p>}
               {error && <p role="alert" className="mt-4 text-xs leading-5 text-red-300">{error}</p>}
-              <button disabled={(!checked && !demo) || busy} onClick={() => navigate('/acquisition/calibration')} className="focus-ring mt-6 flex w-full items-center justify-between bg-[#0057FF] px-4 py-4 mono-label text-[0.6rem] text-white hover:bg-[#3578ff] disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30">
+              <button disabled={(!checked && !demo) || busy} onClick={() => navigate('/acquisition/calibration')} className="focus-ring mt-6 flex w-full items-center justify-between bg-[#0369A1] px-4 py-4 mono-label text-[0.6rem] text-white hover:bg-[#075985] disabled:cursor-not-allowed disabled:bg-white/10 disabled:text-white/30">
                 Collect data <ArrowRight size={16} />
               </button>
               <p className="mt-3 text-xs text-white/45">Next: calibration and synchronization guidance.</p>
@@ -590,7 +590,7 @@ export default function Acquisition() {
             <AlertDialogDescription className="text-white/65">{connectionError}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction className="bg-[#0057FF] text-white hover:bg-[#3578ff]">OK</AlertDialogAction>
+            <AlertDialogAction className="bg-[#0369A1] text-white hover:bg-[#075985]">OK</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
