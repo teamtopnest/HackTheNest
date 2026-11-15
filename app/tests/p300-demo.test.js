@@ -1,7 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createDemoExperiment } from '../src/lib/p300-demo.js';
-import { COMMUNICATION_MENU, getFlashingRounds } from '../src/lib/communication-menu.js';
+import { COMMUNICATION_MENU, getFlashingRounds, getMenuPath } from '../src/lib/communication-menu.js';
+
+test('menu paths identify repeated labels by their actual location', () => {
+  const food = COMMUNICATION_MENU.children[0];
+  const fastFood = food.children[0];
+  assert.deepEqual(getMenuPath(COMMUNICATION_MENU, COMMUNICATION_MENU), []);
+  assert.deepEqual(getMenuPath(COMMUNICATION_MENU, fastFood.children[0]), [0, 0, 0]);
+  assert.deepEqual(getMenuPath(COMMUNICATION_MENU, fastFood.children.at(-1)), [0, 0, 4]);
+  assert.equal(getMenuPath(COMMUNICATION_MENU, { label: 'Food' }), null);
+});
 
 function seeded(seed) {
   return () => {

@@ -57,9 +57,39 @@ live values.
 For a headset-free preview, enable **Demo mode** and open the calibration page.
 Complete the three steps and select **Open demo workspace**, or use
 **Skip checks (demo only)**. The skip link is not shown for a live headset.
-The browser generates synthetic traces locally; no backend, headset or MongoDB
-is used and no demo data is saved. The g.Nautilus demo channel count is only an
+The browser generates synthetic traces locally; no headset or MongoDB is used
+and no demo EEG data is saved. Demo speech uses the local backend and
+ElevenLabs as described below. The g.Nautilus demo channel count is only an
 illustrative preset, not a device measurement.
+
+### ElevenLabs demo speech
+
+On the computer running the local EEG service, create the ignored
+`backend\.env.local` file and add these values (do not put the key in frontend
+code or chat):
+
+```text
+ELEVENLABS_API_KEY=your_api_key
+ELEVENLABS_VOICE_ID=your_voice_id
+```
+
+Get the API key from ElevenLabs and choose a voice ID from your ElevenLabs
+account. Environment variables take precedence, followed by `.env.local` and
+then the existing `.env`. Restart the backend with `.\backend\scripts\stream.ps1` from the
+repository root. Demo speech is enabled by default; start flashing in the
+demo workspace. Each synthetic result is spoken once, including intermediate
+choices (for example, "I want food", "I want fast food", "I want pizza").
+Use **Disable demo speech** to turn it off.
+If the browser blocks automatic playback, use the **Play speech** button.
+Errors, including missing configuration or provider failures, are shown in
+the workspace. An ElevenLabs HTTP 402 response requires checking the account's
+credits and billing.
+
+Only predefined demo menu paths are accepted by the speech endpoint; the
+corresponding synthetic phrase is sent to ElevenLabs. Do not use the demo
+for real patient choices or enter patient information. Live acquisition does
+not trigger speech. The local backend is unauthenticated and is not suitable
+for public exposure.
 
 In the demo workspace, **Start flashing** opts into visual flashing (a one-line
 reminder to stop if uncomfortable stays next to the button). The demo randomly

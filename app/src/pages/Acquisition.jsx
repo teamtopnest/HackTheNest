@@ -8,7 +8,7 @@ import core8Image from '../assets/headsets/core-8.png';
 import nautilusProImage from '../assets/headsets/nautilus-pro.png';
 import nautilusResearchImage from '../assets/headsets/nautilus-research.png';
 import { createDemoExperiment, DEMO_CHANNEL_LABELS } from '../lib/p300-demo';
-import { COMMUNICATION_MENU, getFlashingRounds } from '../lib/communication-menu';
+import { COMMUNICATION_MENU, getFlashingRounds, getMenuPath } from '../lib/communication-menu';
 import Calibration from '../components/Calibration';
 
 const API_URL = (import.meta.env.VITE_EEG_API_URL || 'http://127.0.0.1:8000').replace(/\/$/, '');
@@ -148,10 +148,16 @@ export default function Acquisition() {
   const [markers, setMarkers] = useState([]);
   const [endIndex, setEndIndex] = useState(0);
   const [demoAverages, setDemoAverages] = useState({});
+  const [speechEnabled, setSpeechEnabled] = useState(true);
+  const [speechError, setSpeechError] = useState('');
   const socketRef = useRef(null);
   const demoTimerRef = useRef(null);
   const demoExperimentRef = useRef(null);
   const enteringWorkspaceRef = useRef(false);
+  const speechAudioRef = useRef(null);
+  const speechAbortRef = useRef(null);
+  const speechUrlRef = useRef(null);
+  const spokenResultRef = useRef(null);
   const selected = HEADSETS.find((headset) => headset.id === model);
   const nautilus = model.startsWith('nautilus');
   const busy = ['scanning', 'checking', 'starting', 'stopping'].includes(phase);
@@ -163,7 +169,25 @@ export default function Acquisition() {
   useEffect(() => () => {
     if (socketRef.current) socketRef.current.close();
     if (demoTimerRef.current) clearInterval(demoTimerRef.current);
+    if (speechAbortRef.current) speechAbortRef.current.abort();
+    if (speechUrlRef.current) URL.revokeObjectURL(speechUrlRef.current);
   }, []);
+
+  function cancelSpeech() {
+    if (speechAbortRef.current) speechAbortRef.current.abort();
+    speechAbortRef.current = null;
+    if (speechAudioRef.current) {
+      speechAudioRef.current.pause();
+      speechAudioRef.current.removeAttribute('src');
+      speechAudioRef.current.load();
+    }
+    if (speechUrlRef.current) URL.revokeObjectURL(speechUrlRef.current);
+    speechUrlRef.current = null;
+  }
+
+  function retrySpeech() {
+    speechAudioRef.current?.play().then(() => setSpeechError('')).catch(() => setSpeechError('Playback failed. Check your audio settings.'));
+  }
 
   function selectModel(id) {
     setModel(id);
@@ -313,6 +337,8 @@ export default function Acquisition() {
   }
 
   function stop() {
+    cancelSpeech();
+    setSpeechError('');
     if (demoTimerRef.current) {
       clearInterval(demoTimerRef.current);
       demoTimerRef.current = null;
@@ -390,6 +416,49 @@ export default function Acquisition() {
   }, [demoResult, phase, pathname, menu, checked]);
 
   useEffect(() => {
+    if (!speechEnabled || !checked?.simulated || !demoResult?.choice || phase !== 'collecting' || pathname !== '/acquisition/workspace' || spokenResultRef.current === demoResult) return;
+    const menuPath = getMenuPath(COMMUNICATION_MENU, menu);
+    const choiceIndex = menu.children.findIndex((item) => item.label === demoResult.choice);
+    if (!menuPath || choiceIndex < 0) {
+      setSpeechError('Could not identify the demo selection for speech.');
+      return;
+    }
+    spokenResultRef.current = demoResult;
+    cancelSpeech();
+    setSpeechError('');
+    const controller = new AbortController();
+    speechAbortRef.current = controller;
+    async function speak() {
+      try {
+        const response = await fetch(`${API_URL}/api/demo/speech`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: [...menuPath, choiceIndex] }),
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          const body = await response.json();
+          throw new Error(typeof body.detail === 'string' ? body.detail : 'Demo speech could not be generated.');
+        }
+        const audio = await response.blob();
+        if (controller.signal.aborted) return;
+        const player = speechAudioRef.current;
+        if (!player) return;
+        speechUrlRef.current = URL.createObjectURL(audio);
+        player.src = speechUrlRef.current;
+        try {
+          await player.play();
+        } catch {
+          if (!controller.signal.aborted) setSpeechError('Automatic playback was blocked. Select Play speech to hear it.');
+        }
+      } catch (err) {
+        if (!controller.signal.aborted) setSpeechError(err.message || 'Demo speech failed. Check the backend connection.');
+      }
+    }
+    speak();
+  }, [demoResult, speechEnabled, checked, menu, phase, pathname]);
+
+  useEffect(() => {
     if (phase === 'collecting' && pathname === '/acquisition/workspace') {
       enteringWorkspaceRef.current = false;
     } else if (phase === 'collecting' && enteringWorkspaceRef.current) {
@@ -440,9 +509,24 @@ export default function Acquisition() {
                   <div className="mt-2 h-1.5 bg-white/10"><div className="h-full bg-[#0057FF] transition-all" style={{ width: `${(demoProgress / (menuItems.length * flashingRounds)) * 100}%` }} /></div>
                 </div>
                 <p className="w-full text-[0.65rem] text-white/35">Flashing stimulus—stop if uncomfortable.</p>
+                <button type="button" onClick={() => { cancelSpeech(); setSpeechError(''); setSpeechEnabled(!speechEnabled); }} aria-pressed={speechEnabled} className="focus-ring border border-white/25 px-4 py-2 text-sm text-white hover:border-white">
+                  {speechEnabled ? 'Disable demo speech' : 'Enable demo speech'}
+                </button>
+                {speechEnabled && <p className="text-xs text-white/50">Synthetic menu phrases are sent to ElevenLabs for speech.</p>}
               </div>
             )}
             {error && <p role="alert" className="mt-4 text-sm text-red-300">{error}</p>}
+            {speechEnabled && checked.simulated && (
+              <>
+                <audio ref={speechAudioRef} hidden />
+                {speechError && !demoResult && (
+                  <div className="mt-4">
+                    <p role="alert" className="text-sm text-red-300">{speechError}</p>
+                    {speechUrlRef.current && <button type="button" className="focus-ring mt-2 border border-white/25 px-4 py-2 text-sm" onClick={retrySpeech}>Play speech</button>}
+                  </div>
+                )}
+              </>
+            )}
             <div className="mt-10 flex items-end justify-between border-b border-white/10 pb-4">
               <div><p className="mono-label text-white/35">{checked.simulated ? 'P300 speller' : 'Manual menu preview'}</p><h2 className="mt-2 font-heading text-2xl">{menu === COMMUNICATION_MENU ? 'What would you like to communicate?' : menu.label}</h2></div>
               {menu !== COMMUNICATION_MENU && <button disabled={flashing} className="focus-ring text-xs text-white/55 hover:text-white disabled:opacity-30" onClick={() => changeMenu(COMMUNICATION_MENU)}>Back to start</button>}
@@ -546,7 +630,7 @@ export default function Acquisition() {
               <button type="button" disabled={busy} aria-pressed={demo} onClick={() => { setDemo(!demo); setChecked(null); setError(''); }} className={`focus-ring mt-5 w-full border px-4 py-3 text-sm disabled:opacity-50 ${demo ? 'border-[#0057FF] bg-[#0057FF]/15 text-white' : 'border-white/20 text-white hover:border-white'}`}>
                 {demo ? 'Demo mode on — switch off' : 'Demo mode'}
               </button>
-              {demo && <p role="status" className="mt-3 text-xs leading-5 text-amber-200">Demo mode bypasses the headset and shows synthetic data only. No data is sent to the backend or database.</p>}
+              {demo && <p role="status" className="mt-3 text-xs leading-5 text-amber-200">Demo mode bypasses the headset and shows synthetic data only. Demo speech sends synthetic menu phrases to ElevenLabs unless disabled.</p>}
               <div className="mt-5 flex gap-3 border border-white/10 bg-white/[0.02] p-4">
                 {nautilus ? <Radio size={18} className="mt-0.5 shrink-0 text-[#5785ff]" /> : <Bluetooth size={18} className="mt-0.5 shrink-0 text-[#5785ff]" />}
                 <p className="text-xs leading-6 text-white/55">{nautilus ? 'Power on your headset and connect its base station and g.tec Device Service on this computer.' : 'Turn on Bluetooth, pair the headset in Windows if required, and power it on.'}</p>
@@ -600,9 +684,13 @@ export default function Acquisition() {
             <AlertDialogTitle>{demoResult?.choice ? `You’ve chosen ${demoResult.choice}` : 'No clear choice'}</AlertDialogTitle>
             <AlertDialogDescription className="text-white/65">
               {demoResult?.choice
-                ? `Simulated demo result. ${menu.children.find((item) => item.label === demoResult.choice)?.children ? 'Opening the next menu' : 'Returning to the main menu'} in ${resultSeconds}s.`
+                ? `${menu.children.find((item) => item.label === demoResult.choice)?.children ? 'Opening the next menu' : 'Returning to the main menu'} in ${resultSeconds}s.`
                 : `The evidence was inconclusive. Restarting this menu in ${resultSeconds}s.`}
             </AlertDialogDescription>
+            {speechError && <p role="alert" className="text-sm text-red-300">{speechError}</p>}
+            {speechEnabled && speechError && speechUrlRef.current && (
+              <button type="button" className="focus-ring border border-white/25 px-4 py-2 text-sm" onClick={retrySpeech}>Play speech</button>
+            )}
           </AlertDialogHeader>
         </AlertDialogContent>
       </AlertDialog>

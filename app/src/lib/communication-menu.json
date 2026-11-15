@@ -1,0 +1,1026 @@
+{
+  "label": "Home",
+  "children": [
+    {
+      "label": "Food",
+      "children": [
+        {
+          "label": "Fast food",
+          "children": [
+            {
+              "label": "Pizza"
+            },
+            {
+              "label": "Taco Bell"
+            },
+            {
+              "label": "McDonald’s"
+            },
+            {
+              "label": "Subway"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Home cooked",
+          "children": [
+            {
+              "label": "Chicken and rice"
+            },
+            {
+              "label": "Pasta"
+            },
+            {
+              "label": "Roast dinner"
+            },
+            {
+              "label": "Stew"
+            },
+            {
+              "label": "Vegetarian meal"
+            },
+            {
+              "label": "Fish and potatoes"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Snacks",
+          "children": [
+            {
+              "label": "Chips"
+            },
+            {
+              "label": "Crackers"
+            },
+            {
+              "label": "Nuts"
+            },
+            {
+              "label": "Popcorn"
+            },
+            {
+              "label": "Granola bar"
+            },
+            {
+              "label": "Cheese"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Fruit",
+          "children": [
+            {
+              "label": "Apple"
+            },
+            {
+              "label": "Banana"
+            },
+            {
+              "label": "Orange"
+            },
+            {
+              "label": "Grapes"
+            },
+            {
+              "label": "Berries"
+            },
+            {
+              "label": "Melon"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Soup",
+          "children": [
+            {
+              "label": "Chicken noodle"
+            },
+            {
+              "label": "Tomato"
+            },
+            {
+              "label": "Vegetable"
+            },
+            {
+              "label": "Lentil"
+            },
+            {
+              "label": "Mushroom"
+            },
+            {
+              "label": "Beef broth"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Dessert",
+          "children": [
+            {
+              "label": "Ice cream"
+            },
+            {
+              "label": "Cake"
+            },
+            {
+              "label": "Cookies"
+            },
+            {
+              "label": "Pudding"
+            },
+            {
+              "label": "Pie"
+            },
+            {
+              "label": "Yogurt"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "label": "Drink",
+      "children": [
+        {
+          "label": "Water",
+          "children": [
+            {
+              "label": "Tap water"
+            },
+            {
+              "label": "Brita filtered"
+            },
+            {
+              "label": "Evian"
+            },
+            {
+              "label": "Dasani"
+            },
+            {
+              "label": "Aquafina"
+            },
+            {
+              "label": "Perrier"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Pop",
+          "children": [
+            {
+              "label": "Coca-Cola"
+            },
+            {
+              "label": "Pepsi"
+            },
+            {
+              "label": "Sprite"
+            },
+            {
+              "label": "7UP"
+            },
+            {
+              "label": "Canada Dry"
+            },
+            {
+              "label": "Fanta"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Juice",
+          "children": [
+            {
+              "label": "Tropicana"
+            },
+            {
+              "label": "Minute Maid"
+            },
+            {
+              "label": "Simply Orange"
+            },
+            {
+              "label": "Ocean Spray"
+            },
+            {
+              "label": "Apple juice"
+            },
+            {
+              "label": "Fresh juice"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Tea",
+          "children": [
+            {
+              "label": "Tetley"
+            },
+            {
+              "label": "Lipton"
+            },
+            {
+              "label": "Twinings"
+            },
+            {
+              "label": "Green tea"
+            },
+            {
+              "label": "Peppermint tea"
+            },
+            {
+              "label": "Decaf tea"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Coffee",
+          "children": [
+            {
+              "label": "Tim Hortons"
+            },
+            {
+              "label": "Starbucks"
+            },
+            {
+              "label": "Nescafé"
+            },
+            {
+              "label": "Decaf coffee"
+            },
+            {
+              "label": "Home brewed"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Milk",
+          "children": [
+            {
+              "label": "Dairy milk"
+            },
+            {
+              "label": "Lactose-free milk"
+            },
+            {
+              "label": "Silk soy"
+            },
+            {
+              "label": "Oatly oat"
+            },
+            {
+              "label": "Almond Breeze"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "label": "Move",
+      "children": [
+        {
+          "label": "Outside",
+          "children": [
+            {
+              "label": "Park"
+            },
+            {
+              "label": "Home"
+            },
+            {
+              "label": "Fresh air"
+            },
+            {
+              "label": "Garden"
+            },
+            {
+              "label": "Patio"
+            },
+            {
+              "label": "Go for a walk"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Inside",
+          "children": [
+            {
+              "label": "Indoor walk"
+            },
+            {
+              "label": "Bedroom"
+            },
+            {
+              "label": "Living room"
+            },
+            {
+              "label": "Kitchen"
+            },
+            {
+              "label": "Bathroom"
+            },
+            {
+              "label": "Hallway"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Reposition",
+          "children": [
+            {
+              "label": "Sit up"
+            },
+            {
+              "label": "Lie down"
+            },
+            {
+              "label": "Turn left"
+            },
+            {
+              "label": "Turn right"
+            },
+            {
+              "label": "Raise legs"
+            },
+            {
+              "label": "Adjust pillow"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Transfer",
+          "children": [
+            {
+              "label": "To wheelchair"
+            },
+            {
+              "label": "To bed"
+            },
+            {
+              "label": "To chair"
+            },
+            {
+              "label": "To standing"
+            },
+            {
+              "label": "Need assistance"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Travel",
+          "children": [
+            {
+              "label": "Visit family"
+            },
+            {
+              "label": "Visit friends"
+            },
+            {
+              "label": "Car ride"
+            },
+            {
+              "label": "Appointment"
+            },
+            {
+              "label": "Shop"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "label": "Pain",
+      "children": [
+        {
+          "label": "Head",
+          "children": [
+            {
+              "label": "Forehead"
+            },
+            {
+              "label": "Temples"
+            },
+            {
+              "label": "Back of head"
+            },
+            {
+              "label": "Face"
+            },
+            {
+              "label": "Eyes"
+            },
+            {
+              "label": "Jaw"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Torso",
+          "children": [
+            {
+              "label": "Chest"
+            },
+            {
+              "label": "Upper back"
+            },
+            {
+              "label": "Lower back"
+            },
+            {
+              "label": "Abdomen"
+            },
+            {
+              "label": "Ribs"
+            },
+            {
+              "label": "Shoulders"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Arms",
+          "children": [
+            {
+              "label": "Left upper arm"
+            },
+            {
+              "label": "Right upper arm"
+            },
+            {
+              "label": "Left elbow"
+            },
+            {
+              "label": "Right elbow"
+            },
+            {
+              "label": "Forearm"
+            },
+            {
+              "label": "Wrist"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Lower limbs",
+          "children": [
+            {
+              "label": "Left hip"
+            },
+            {
+              "label": "Right hip"
+            },
+            {
+              "label": "Thigh"
+            },
+            {
+              "label": "Knee"
+            },
+            {
+              "label": "Calf"
+            },
+            {
+              "label": "Shin"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Feet",
+          "children": [
+            {
+              "label": "Left ankle"
+            },
+            {
+              "label": "Right ankle"
+            },
+            {
+              "label": "Heel"
+            },
+            {
+              "label": "Sole"
+            },
+            {
+              "label": "Toes"
+            },
+            {
+              "label": "Top of foot"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Hands",
+          "children": [
+            {
+              "label": "Left hand"
+            },
+            {
+              "label": "Right hand"
+            },
+            {
+              "label": "Palm"
+            },
+            {
+              "label": "Fingers"
+            },
+            {
+              "label": "Thumb"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "label": "Help",
+      "children": [
+        {
+          "label": "Toilet",
+          "children": [
+            {
+              "label": "Need to pee"
+            },
+            {
+              "label": "Bowel movement"
+            },
+            {
+              "label": "Help to bathroom"
+            },
+            {
+              "label": "Bedpan"
+            },
+            {
+              "label": "Urinal"
+            },
+            {
+              "label": "Change pad"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Clothing",
+          "children": [
+            {
+              "label": "Change clothes"
+            },
+            {
+              "label": "Shirt"
+            },
+            {
+              "label": "Pants"
+            },
+            {
+              "label": "Socks"
+            },
+            {
+              "label": "Too tight"
+            },
+            {
+              "label": "Too hot or cold"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Hygiene",
+          "children": [
+            {
+              "label": "Wash face"
+            },
+            {
+              "label": "Brush teeth"
+            },
+            {
+              "label": "Shower"
+            },
+            {
+              "label": "Wash hands"
+            },
+            {
+              "label": "Comb hair"
+            },
+            {
+              "label": "Clean spill"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Comfort",
+          "children": [
+            {
+              "label": "Blanket"
+            },
+            {
+              "label": "Pillow"
+            },
+            {
+              "label": "Adjust temperature"
+            },
+            {
+              "label": "Reduce noise"
+            },
+            {
+              "label": "Dim lights"
+            },
+            {
+              "label": "Rest"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Eating assistance",
+          "children": [
+            {
+              "label": "Help eating"
+            },
+            {
+              "label": "Help drinking"
+            },
+            {
+              "label": "Cut food"
+            },
+            {
+              "label": "Bring meal"
+            },
+            {
+              "label": "Bring straw"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Call someone",
+          "children": [
+            {
+              "label": "Caregiver"
+            },
+            {
+              "label": "Nurse"
+            },
+            {
+              "label": "Doctor"
+            },
+            {
+              "label": "Family member"
+            },
+            {
+              "label": "Friend"
+            },
+            {
+              "label": "Urgent assistance"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "label": "Family",
+      "children": [
+        {
+          "label": "Parents",
+          "children": [
+            {
+              "label": "Mother"
+            },
+            {
+              "label": "Father"
+            },
+            {
+              "label": "Stepmother"
+            },
+            {
+              "label": "Stepfather"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Siblings",
+          "children": [
+            {
+              "label": "Sister"
+            },
+            {
+              "label": "Brother"
+            },
+            {
+              "label": "Stepsister"
+            },
+            {
+              "label": "Stepbrother"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Children",
+          "children": [
+            {
+              "label": "Daughter"
+            },
+            {
+              "label": "Son"
+            },
+            {
+              "label": "Granddaughter"
+            },
+            {
+              "label": "Grandson"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Partner",
+          "children": [
+            {
+              "label": "Spouse"
+            },
+            {
+              "label": "Partner"
+            },
+            {
+              "label": "Fiancé"
+            },
+            {
+              "label": "Fiancée"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Extended family",
+          "children": [
+            {
+              "label": "Grandmother"
+            },
+            {
+              "label": "Grandfather"
+            },
+            {
+              "label": "Aunt"
+            },
+            {
+              "label": "Uncle"
+            },
+            {
+              "label": "Cousin"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Contact family",
+          "children": [
+            {
+              "label": "Phone call"
+            },
+            {
+              "label": "Video call"
+            },
+            {
+              "label": "Send message"
+            },
+            {
+              "label": "Ask for a visit"
+            },
+            {
+              "label": "Share an update"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "label": "Friends",
+      "children": [
+        {
+          "label": "Close friends",
+          "children": [
+            {
+              "label": "Best friend"
+            },
+            {
+              "label": "Childhood friend"
+            },
+            {
+              "label": "School friend"
+            },
+            {
+              "label": "Family friend"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Friend groups",
+          "children": [
+            {
+              "label": "Work friends"
+            },
+            {
+              "label": "Neighbors"
+            },
+            {
+              "label": "Sports friends"
+            },
+            {
+              "label": "Community friends"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Contact friends",
+          "children": [
+            {
+              "label": "Phone a friend"
+            },
+            {
+              "label": "Video call a friend"
+            },
+            {
+              "label": "Message a friend"
+            },
+            {
+              "label": "Ask a friend to visit"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Activities",
+          "children": [
+            {
+              "label": "Chat together"
+            },
+            {
+              "label": "Watch a movie"
+            },
+            {
+              "label": "Listen to music"
+            },
+            {
+              "label": "Play a game"
+            },
+            {
+              "label": "Go out together"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Messages",
+          "children": [
+            {
+              "label": "Hello"
+            },
+            {
+              "label": "Thank you"
+            },
+            {
+              "label": "I miss you"
+            },
+            {
+              "label": "Please visit"
+            },
+            {
+              "label": "See you soon"
+            },
+            {
+              "label": "Other"
+            }
+          ]
+        },
+        {
+          "label": "Other"
+        }
+      ]
+    },
+    {
+      "label": "Other"
+    }
+  ]
+}
