@@ -55,10 +55,10 @@ export default function Roadmap() {
                 <span className={`mono-label ${TEXT[phase.state]}`}>{phase.window}</span>
               </div>
               <span className={`mt-6 block h-2 w-2 rounded-full border ${DOT[phase.state]}`} aria-hidden="true" />
-              <h3 className="mt-4 font-heading text-lg font-semibold leading-tight tracking-tight text-[#F8FAFC]">
+              <h3 className="mt-4 font-heading text-xl font-semibold leading-tight tracking-tight text-[#F8FAFC]">
                 {phase.title}
               </h3>
-              <p className="mt-2 text-sm leading-relaxed text-[#F8FAFC]/50">{phase.body}</p>
+              <p className="mt-2 text-base leading-relaxed text-[#F8FAFC]/50">{phase.body}</p>
             </li>
           ))}
         </ol>
