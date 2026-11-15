@@ -45,6 +45,27 @@
 
   * {
     @apply border-border;
+    scrollbar-width: thin;
+    scrollbar-color: #34476b #080a0f;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #080a0f;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 2px solid #080a0f;
+    border-radius: 8px;
+    background: #34476b;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #5487ff;
   }
 
   html {
@@ -64,6 +85,42 @@
 }
 
 /* ---------- Neural brutalism primitives ---------- */
+
+@media (min-width: 1024px) {
+  .signal-panel-fit,
+  .erp-panel {
+    display: flex;
+    flex-direction: column;
+    height: max(620px, calc(100dvh - 72px));
+  }
+
+  .signal-panel-fit .signal-rows {
+    display: grid;
+    grid-template-rows: repeat(var(--signal-rows), minmax(0, 1fr));
+    flex: 1;
+    min-height: 0;
+  }
+
+  .signal-panel-fit .signal-row,
+  .erp-grid figure {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .signal-panel-fit .signal-row svg,
+  .erp-graph {
+    flex: 1;
+    height: 0;
+    min-height: 0;
+  }
+
+  .erp-grid {
+    flex: 1;
+    min-height: 0;
+    grid-template-rows: repeat(var(--erp-rows), minmax(0, 1fr));
+  }
+}
 
 .mono {
   font-family: var(--font-mono);

@@ -4,20 +4,28 @@ import asyncio
 import logging
 import os
 import queue
+import threading
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from eeg_stream.device import DeviceConnectionError, EEGDevice, discover_devices
+from eeg_stream.headsets import HeadsetError, check, discover
 from eeg_stream.storage import MongoRecorder, StorageError
 
 LOGGER = logging.getLogger(__name__)
+ALLOWED_ORIGINS = {"http://localhost:5173", "http://127.0.0.1:5173"}
 
 class DeviceSelection(BaseModel):
     serial: str = Field(min_length=1, max_length=128, pattern=r"^\S+$")
+
+
+class HeadsetSelection(DeviceSelection):
+    model: Literal["hybrid-black", "core-4", "core-8", "nautilus-pro", "nautilus-research"]
+    sampling_rate_hz: Literal[250, 500] = 250
 
 
 def create_app(
@@ -31,6 +39,8 @@ def create_app(
         serial=os.getenv("UNICORN_SERIAL") or None, recorder=storage
     )
     stream_lock = asyncio.Lock()
+    setup_lock = threading.RLock()
+    prepared: dict[str, Any] | None = None
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -45,7 +55,7 @@ def create_app(
     app = FastAPI(title="Local EEG Stream", version="0.2.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+        allow_origins=list(ALLOWED_ORIGINS),
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
     )
@@ -71,11 +81,60 @@ def create_app(
         except (DeviceConnectionError, StorageError) as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
 
+    @app.get("/api/headsets/{model}/devices")
+    def find_headsets(
+        model: Literal["hybrid-black", "core-4", "core-8", "nautilus-pro", "nautilus-research"],
+    ) -> dict[str, Any]:
+        try:
+            with setup_lock:
+                if eeg_device.status["state"] == "connected":
+                    raise HTTPException(status_code=409, detail="Stop acquisition before scanning")
+                return {"devices": discover(model)}
+        except HeadsetError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    @app.post("/api/headsets/check")
+    def check_headset(selection: HeadsetSelection) -> dict[str, Any]:
+        nonlocal prepared
+        with setup_lock:
+            if eeg_device.status["state"] == "connected":
+                raise HTTPException(status_code=409, detail="Stop acquisition before checking a headset")
+            prepared = None
+            try:
+                prepared = check(selection.model, selection.serial, selection.sampling_rate_hz)
+                eeg_device.configure(prepared)
+            except (HeadsetError, DeviceConnectionError) as exc:
+                prepared = None
+                raise HTTPException(status_code=503, detail=str(exc)) from exc
+            return {"checked": True, "device": prepared}
+
+    @app.post("/api/headsets/start")
+    def start_headset(selection: HeadsetSelection) -> dict[str, Any]:
+        with setup_lock:
+            if (
+                prepared is None
+                or prepared["model_id"] != selection.model
+                or prepared["serial"] != selection.serial
+                or prepared["sampling_rate_hz"] != selection.sampling_rate_hz
+            ):
+                raise HTTPException(status_code=409, detail="Check the selected headset before collecting")
+            if not storage.status["configured"]:
+                raise HTTPException(status_code=503, detail="Configure MongoDB before collecting data")
+            try:
+                if eeg_device.status["state"] == "connected":
+                    raise HTTPException(status_code=409, detail="An acquisition is already active")
+                eeg_device.configure(prepared)
+                eeg_device.connect(serial=selection.serial)
+            except DeviceConnectionError as exc:
+                raise HTTPException(status_code=503, detail=str(exc)) from exc
+            return {**get_status(), "device": eeg_device.metadata}
+
     @app.post("/api/device/connect")
     @app.post("/api/acquisition/start")
     def connect_device(selection: DeviceSelection | None = None) -> dict[str, Any]:
         try:
-            eeg_device.connect(serial=selection.serial if selection else None)
+            with setup_lock:
+                eeg_device.connect(serial=selection.serial if selection else None)
         except DeviceConnectionError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return get_status()
@@ -84,13 +143,18 @@ def create_app(
     @app.post("/api/acquisition/stop")
     def disconnect_device() -> dict[str, Any]:
         try:
-            eeg_device.disconnect()
+            with setup_lock:
+                eeg_device.disconnect()
         except StorageError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         return get_status()
 
     @app.websocket("/ws/eeg")
     async def stream_eeg(websocket: WebSocket) -> None:
+        origin = websocket.headers.get("origin")
+        if origin is not None and origin not in ALLOWED_ORIGINS:
+            await websocket.close(code=1008, reason="Origin is not allowed")
+            return
         await websocket.accept()
         if stream_lock.locked():
             await websocket.send_json(
@@ -102,6 +166,7 @@ def create_app(
         async with stream_lock:
             receive_task: asyncio.Task[Any] | None = None
             frame_task: asyncio.Task[dict[str, Any] | None] | None = None
+            start_task: asyncio.Task[Any] | None = None
             stream_started = False
             try:
                 try:
@@ -124,21 +189,36 @@ def create_app(
 
                 owns_acquisition = eeg_device.status["state"] != "connected"
                 try:
-                    await asyncio.to_thread(eeg_device.connect)
-                except DeviceConnectionError as exc:
-                    await websocket.send_json({"type": "error", "message": str(exc)})
+                    if "model" in command:
+                        try:
+                            selection = HeadsetSelection.model_validate(command)
+                        except ValueError:
+                            raise HTTPException(status_code=422, detail="Invalid headset selection")
+                        start_task = asyncio.create_task(
+                            asyncio.to_thread(start_headset, selection)
+                        )
+                        await asyncio.shield(start_task)
+                        owns_acquisition = True
+                    else:
+                        await asyncio.to_thread(eeg_device.connect)
+                except (DeviceConnectionError, HTTPException) as exc:
+                    message = exc.detail if isinstance(exc, HTTPException) else str(exc)
+                    await websocket.send_json({"type": "error", "message": message})
                     await websocket.close(code=1011)
                     return
 
                 stream_started = owns_acquisition
+                metadata = getattr(eeg_device, "metadata", {
+                    "sampling_rate_hz": 250,
+                    "channel_count": 8,
+                    "channel_indices": list(range(8)),
+                    "unit": "uV",
+                    "filter_hz": [0.5, 30.0],
+                })
                 await websocket.send_json(
                     {
                         "type": "started",
-                        "sampling_rate_hz": 250,
-                        "channel_count": 8,
-                        "channel_indices": list(range(8)),
-                        "unit": "uV",
-                        "filter_hz": [0.5, 30.0],
+                        **metadata,
                     }
                 )
                 receive_task = asyncio.create_task(websocket.receive_json())
@@ -222,6 +302,13 @@ def create_app(
                     receive_task.cancel()
                 if frame_task is not None and not frame_task.done():
                     frame_task.cancel()
+                if start_task is not None and not stream_started:
+                    try:
+                        await asyncio.shield(start_task)
+                    except (DeviceConnectionError, HTTPException) as exc:
+                        LOGGER.warning("EEG acquisition startup did not complete: %s", exc)
+                    else:
+                        stream_started = True
                 if stream_started:
                     try:
                         await asyncio.to_thread(eeg_device.disconnect)

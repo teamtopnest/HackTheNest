@@ -1,10 +1,44 @@
 # Local Hybrid Black EEG backend
 
-This Windows-local FastAPI service acquires **Unicorn Hybrid Black** EEG using
-`gp.HybridBlack`: eight channels at 250 Hz, in microvolts. It applies a stateful,
+This local FastAPI service acquires EEG using g.Pype. The acquisition setup page
+offers Hybrid Black, BCI Core-4/Core-8 and g.Nautilus PRO/RESEARCH. It applies a stateful,
 causal order-2 Butterworth **0.5-30 Hz bandpass**, records filtered blocks to
 MongoDB when configured, and optionally streams them over a WebSocket.
 Motion and auxiliary channels are disabled.
+
+## Acquisition setup and experimental devices
+
+Run the backend on the computer connected to the headset; a remote server cannot
+directly open a headset beside a different computer. Start the frontend at
+`http://localhost:5173`, select **Start acquisition**, select the model, scan,
+choose the serial, and check its connection. The check opens and releases the
+device without recording; **Collect data** reopens it and starts the WebSocket
+and MongoDB session. The page-owned WebSocket stops collection when it closes.
+An HTTP-started acquisition retains its existing independent lifecycle.
+
+Core-4/Core-8 use `gp.BCICore` at 250 Hz; g.Nautilus uses `gp.GNautilus` and
+the g.tec Device Service, with a choice of 250/500 Hz and channel selection read
+from the device. Core and g.Nautilus paths are experimental and not verified on
+physical hardware. The g.Nautilus driver reports the family, not the PRO versus
+RESEARCH variant: that model name is user-selected and stored as such. The UI
+shows channel numbers, not assumed electrode positions. Vendor drivers,
+licenses, supported adapter/base station and headset configuration are required.
+Only signal channels are persisted; device quality channels and hardware
+timeline markers are not stored. Host-generated sample indices cannot establish
+hardware continuity, so the preview must not be used to certify signal quality.
+
+For API clients, `GET /api/headsets/{model}/devices` scans, and
+`POST /api/headsets/check` accepts `{"model":"core-4","serial":"U4-...","sampling_rate_hz":250}`.
+Send the same fields with `{"action":"start"}` as the first `/ws/eeg` message;
+the earlier check and MongoDB configuration are required. The stream reports the
+checked channel count, rate, serial and filtering metadata. The server rejects
+browser WebSocket origins other than the configured local Vite origins.
+
+P300 decoding is intentionally disabled: the existing decoder expects raw EEG,
+calibration and synchronized stimulus markers, while this stream is already
+filtered. The manual menu is only a UI preview, not medical or emergency use.
+Production deployment needs a secure local device bridge, authenticated APIs,
+TLS, deployment-specific CORS/WebSocket origins and durable offline buffering.
 
 ## Hardware prerequisite
 
@@ -160,8 +194,8 @@ Ctrl+C performs normal device shutdown and flushes recording.
 
 `sessions` contains session UUID, selected serial, channel/rate/unit/filter
 metadata, start/stop UTC times, completion/error state and persisted counts.
-`eeg_blocks` stores one document per filtered 25-sample block, with session ID,
-sample index, sample count, host receive UTC timestamp and a samples-by-8 array.
+`eeg_blocks` stores one document per filtered block, with session ID,
+sample index, sample count, host receive UTC timestamp and a samples-by-channel array.
 A unique `(session_id, sample_index_start)` index separates/order-checks blocks.
 Indices restart at zero for each session. These are **filtered EEG only**, not raw
 EEG, hardware timestamps, battery telemetry or hardware packet-loss measurements.

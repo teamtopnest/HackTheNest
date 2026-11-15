@@ -22,6 +22,92 @@ npm run build
 npm run preview
 ```
 
+The **Start acquisition** link opens `/acquisition`. On the headset computer,
+start the Python service separately using `backend\scripts\stream.ps1` from
+the repository root, and configure MongoDB in `backend\.env`. The page uses
+`http://127.0.0.1:8000` by default; `VITE_EEG_API_URL` can override the address
+at build time. The backend currently accepts browser origins on port 5173 only.
+
+Choose a model, scan, select a serial and check it. Continue to the calibration
+and synchronization guidance page before opening a preview. The check opens and
+releases the device; the uncalibrated live preview reopens it and writes filtered
+EEG to MongoDB. Closing a WebSocket-started page ends that collection. Core and
+g.Nautilus hardware adapters remain experimental; g.Nautilus requires a working
+g.tec Device Service/base station and the selected variant is not verified by
+the driver. Electrode positions are not inferred from channel indices.
+
+The calibration page is an operator checklist with three steps. The workspace
+button stays disabled until all three are completed:
+
+1. **Alignment** — review the 10–20 reference image (Fz, Cz, P3, Pz, P4, PO7,
+   PO8, Oz), then select **Mark alignment as good**.
+2. **Calibration** — **Run Calibration**, then **Calibration completed**.
+3. **Synchronization** — **Run Synchronization**, then
+   **Synchronization completed**.
+
+No measurement API is connected. With a headset, **Run** starts the manual
+procedure for the operator to perform with the manufacturer's tools. In demo
+mode it plays a short simulated run. **Completed** records an operator
+confirmation only. It does not verify fitting, impedance, signal quality,
+channel mapping or stimulus timing, and the live preview stays uncalibrated for
+P300 purposes. Checklist state resets when the page is reopened or the headset
+or mode changes. The contact and synchronization figures are illustrations, not
+live values.
+
+For a headset-free preview, enable **Demo mode** and open the calibration page.
+Complete the three steps and select **Open demo workspace**, or use
+**Skip checks (demo only)**. The skip link is not shown for a live headset.
+The browser generates synthetic traces locally; no backend, headset or MongoDB
+is used and no demo data is saved. The g.Nautilus demo channel count is only an
+illustrative preset, not a device measurement.
+
+In the demo workspace, **Start flashing** opts into visual flashing (a one-line
+reminder to stop if uncomfortable stays next to the button). The demo randomly
+chooses an attended item and adds synthetic event-related responses to noisy
+traces. After each flash of the attended item, a P300-like positive wave
+(~300 ms, ±30 ms trial jitter, parietal-weighted over the reference montage
+Fz, Cz, P3, Pz, P4, PO7, PO8, Oz) appears on all 8 channels. The signal panel marks every
+flash with a dashed line, and attended flashes with a green line and shaded
+250–500 ms window. On desktop, the demo uses a 20% / 50% / 30% layout:
+electrode traces on the left, the communication menu in the center, and
+**Averaged responses by item** on the right. Up to eight electrodes fit the
+left sidebar without internal scrolling; larger counts enable a dark/blue
+scrollbar. The right sidebar fits all item graphs in two columns, resizing them
+to the available height. Both panels stay visible while scrolling. On unusually
+short desktop windows, panels keep a 620px minimum height so the page scrolls
+instead of clipping the charts. Panels stack on smaller screens.
+The live preview keeps the left electrode sidebar but has no synthetic ERP
+sidebar. Menu buttons contain only labels and evidence bars.
+The separate response sidebar shows one graph per item, with
+distinct colored electrode averages overlaid (0–700 ms, shared -20 to 40 µV
+scale) and a matching legend. Each electrode is baseline-corrected separately
+and averaged over repeated flashes, preserving its own waveform and amplitude.
+As flashes accumulate, the attended item's curves form clear peaks while the
+others average towards flat. The menu has three choice levels (category,
+subcategory, final option), including Food, Drink, Move, Pain, Help, Family and
+Friends. Every menu includes Other. Navigation follows the selected node, so
+repeated labels such as Home or Other do not link to unrelated menus.
+Intermediate menus use four balanced flashing rounds. Final-level menus use
+five rounds and require five positive demo scores plus a margin over the
+runner-up. These thresholds are illustrative, not calibrated probabilities or
+measured accuracy.
+
+The "You've chosen …" modal has no action buttons. Intermediate choices remain
+visible for five seconds, then automatically open the chosen submenu, clear
+ERP averages/evidence/markers and begin flashing its items. Final choices stop
+flashing and remain visible for 25 seconds, then return to the main menu with
+options and signals reset. Collection continues; flashing remains stopped until
+Start flashing is selected again. An inconclusive result displays for five
+seconds before retrying the same menu. Navigation or stopping collection
+cancels pending transitions.
+
+Real P300 decoding, synchronized stimulus markers and patient-specific
+thresholds are not implemented; the live workspace menu is manual and keeps its
+"decoding not active" notice. The current service is a local,
+unauthenticated prototype: a hosted HTTPS frontend and a remotely deployed
+backend require a secure local acquisition bridge, authentication, browser
+origin and TLS configuration before production use.
+
 ## Host on Vercel
 
 1. Import the Git repository into Vercel and set the project **Root Directory** to `app`.
