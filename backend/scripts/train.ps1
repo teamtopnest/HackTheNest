@@ -1,7 +1,7 @@
 # Fit the LDA on every flash in the given MAT files and save it.
 # Usage, from the repo root:
 #   .\backend\scripts\train.ps1
-#   .\backend\scripts\train.ps1 -Output D:\models\s1.joblib D:\data\S1.mat
+#   .\backend\scripts\train.ps1 -Output D:\models\s1.joblib backend\resources\unicorn-bi\S1.mat
 
 param(
     [string]$Output,

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
-from backend.decoder.config import CHANNELS, CHUNK_SAMPLES, FS, POST, PRE
+from backend.decoder.config import CHANNELS, CHUNK_SAMPLES, FS, POST, PRE, RECORDINGS_DIR
 from backend.decoder.decode.model import load_model, save_model, train_lda
 from backend.decoder.decode.online import OnlineDecoder
 from backend.decoder.sources.device import DeviceSource
@@ -20,12 +20,7 @@ from backend.decoder.spell.grid import (
     stimulus_name,
 )
 
-DATA = (
-    Path(__file__).resolve().parents[2]
-    / "sources"
-    / "p300-speller"
-    / "S1.mat"
-)
+DATA = RECORDINGS_DIR / "S1.mat"
 
 
 class ConstantModel:
@@ -43,6 +38,8 @@ class SequenceModel:
 
 class ReplayTests(unittest.TestCase):
     def test_s1_matches_the_recording_contract(self):
+        self.assertEqual(DATA.parent.name, "unicorn-bi")
+        self.assertIn("backend", DATA.parts)
         recording = load_recording(DATA)
         self.assertEqual(recording.fs, FS)
         self.assertEqual(recording.eeg.shape[1], len(CHANNELS))

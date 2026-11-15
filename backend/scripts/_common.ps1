@@ -3,7 +3,7 @@
 
 $BackendRoot = Split-Path -Parent $PSScriptRoot
 $RepoRoot = Split-Path -Parent $BackendRoot
-$DataDir = Join-Path (Split-Path -Parent $RepoRoot) "sources\p300-speller"
+$DataDir = Join-Path $BackendRoot "resources\unicorn-bi"
 
 function Get-BackendPython {
     $candidates = @(
