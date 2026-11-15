@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+
 const LINKS = [
   { label: 'Channels', href: '#channels' },
   { label: 'Decode', href: '#stream' },
@@ -22,13 +24,24 @@ export default function SiteNav() {
               {link.label}
             </a>
           ))}
+          <Link
+            to="/acquisition"
+            className="focus-ring mono-label text-[0.6rem] text-[#0057FF] transition-colors hover:text-white"
+          >
+            Start acquisition
+          </Link>
         </nav>
-        <a
-          href="#access"
-          className="focus-ring border border-white/30 px-3 py-2 mono-label text-[0.6rem] text-[#F2F2F2] transition-colors hover:border-[#0057FF] hover:bg-[#0057FF]"
-        >
-          Get in touch
-        </a>
+        <div className="flex items-center gap-3">
+          <Link to="/acquisition" className="focus-ring mono-label text-[0.55rem] text-[#F2F2F2] md:hidden">
+            Start acquisition
+          </Link>
+          <a
+            href="#access"
+            className="focus-ring border border-white/30 px-3 py-2 mono-label text-[0.6rem] text-[#F2F2F2] transition-colors hover:border-[#0057FF] hover:bg-[#0057FF]"
+          >
+            Get in touch
+          </a>
+        </div>
       </div>
     </header>
   );

@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/acquisition", "destination": "/" },
+    { "source": "/acquisition/:path*", "destination": "/" }
+  ]
+}

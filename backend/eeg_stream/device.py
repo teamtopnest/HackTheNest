@@ -10,6 +10,7 @@ from typing import Any, Callable
 import numpy as np
 
 from eeg_stream.storage import MongoRecorder, StorageError
+from eeg_stream.headsets import MODELS
 
 LOGGER = logging.getLogger(__name__)
 
@@ -51,6 +52,7 @@ class EEGDevice:
             raise ValueError("frame_queue_size must be greater than zero")
 
         self._serial = serial
+        self._configuration: dict[str, Any] | None = None
         self._recorder = recorder
         self._pipeline_factory = pipeline_factory or self._create_gpype_pipeline
         self._frames: queue.Queue[dict[str, Any] | None] = queue.Queue(
@@ -80,6 +82,8 @@ class EEGDevice:
 
     @property
     def metadata(self) -> dict[str, Any]:
+        if self._configuration is not None:
+            return dict(self._configuration)
         return {
             "serial": self._serial,
             "model": "Unicorn Hybrid Black",
@@ -90,6 +94,13 @@ class EEGDevice:
             "filter_hz": [FILTER_LOW_HZ, FILTER_HIGH_HZ],
         }
 
+    def configure(self, configuration: dict[str, Any]) -> None:
+        with self._lifecycle_lock:
+            if self._pipeline is not None:
+                raise DeviceConnectionError("Stop acquisition before changing headsets")
+            self._configuration = dict(configuration)
+            self._serial = configuration["serial"]
+
     def connect(self, serial: str | None = None) -> None:
         with self._lifecycle_lock:
             if self._pipeline is not None:
@@ -99,6 +110,8 @@ class EEGDevice:
                     raise DeviceConnectionError("Disconnect before selecting another device")
                 return
             if serial is not None:
+                if self._configuration is not None and serial != self._configuration["serial"]:
+                    self._configuration = None
                 self._serial = serial
 
             self._state = "connecting"
@@ -135,7 +148,7 @@ class EEGDevice:
                     except StorageError:
                         LOGGER.error("Failed to finalize recording after device startup failed")
                 raise DeviceConnectionError(
-                    f"Could not connect to the Unicorn Hybrid Black: {exc}"
+                    f"Could not start EEG acquisition for {self.metadata['model']}: {exc}"
                 ) from exc
 
             self._pipeline = pipeline
@@ -169,9 +182,11 @@ class EEGDevice:
         if self._state == "error":
             raise DeviceConnectionError(self._last_error or "EEG acquisition failed")
         frame = np.asarray(data, dtype=float)
-        if frame.ndim != 2 or frame.shape[1] != EEG_CHANNEL_COUNT:
+        metadata = self.metadata
+        channel_count = metadata["channel_count"]
+        if frame.ndim != 2 or frame.shape[1] != channel_count:
             message = (
-                f"Expected a samples-by-{EEG_CHANNEL_COUNT} EEG block, "
+                f"Expected a samples-by-{channel_count} EEG block, "
                 f"received shape {frame.shape}"
             )
             self._state = "error"
@@ -189,9 +204,9 @@ class EEGDevice:
             self._next_sample_index += frame.shape[0]
             payload = {
                 "type": "eeg",
-                "sampling_rate_hz": SAMPLE_RATE_HZ,
-                "channel_count": EEG_CHANNEL_COUNT,
-                "channel_indices": list(range(EEG_CHANNEL_COUNT)),
+                "sampling_rate_hz": metadata["sampling_rate_hz"],
+                "channel_count": channel_count,
+                "channel_indices": metadata["channel_indices"],
                 "unit": "uV",
                 "sample_index_start": sample_index_start,
                 "sample_count": int(frame.shape[0]),
@@ -250,13 +265,36 @@ class EEGDevice:
             def step(self, data: dict[str, Any]) -> None:
                 on_frame(data[input_port])
 
-        source = gp.HybridBlack(
-            serial=self._serial,
-            frame_size=25,
-            include_accel=False,
-            include_gyro=False,
-            include_aux=False,
-        )
+        metadata = self.metadata
+        family = MODELS[metadata.get("model_id", "hybrid-black")]["family"]
+        if family == "hybrid":
+            source = gp.HybridBlack(
+                serial=self._serial,
+                frame_size=25,
+                include_accel=False,
+                include_gyro=False,
+                include_aux=False,
+            )
+        elif family == "core":
+            source = gp.BCICore(
+                serial=self._serial,
+                frame_size=25,
+                sampling_rate=metadata["sampling_rate_hz"],
+                channel_selection=metadata["channel_indices"],
+            )
+        else:
+            source = gp.GNautilus(
+                serial=self._serial,
+                sampling_rate=metadata["sampling_rate_hz"],
+                channel_selection=metadata["channel_indices"],
+                frame_size=1,
+                enable_di=False,
+                enable_counter=False,
+                acceleration_data=False,
+                link_quality=False,
+                battery_level=False,
+                validation_indicator=False,
+            )
         bandpass = gp.Bandpass(
             f_lo=FILTER_LOW_HZ,
             f_hi=FILTER_HIGH_HZ,
@@ -265,6 +303,15 @@ class EEGDevice:
         )
         sink = AcquisitionSink()
         pipeline = gp.Pipeline()
-        pipeline.connect(source, bandpass)
+        if family == "core":
+            signal_channels = gp.ChannelSelector(roles=gp.Constants.ChannelRoles.SIGNAL)
+            pipeline.connect(source, signal_channels)
+            pipeline.connect(signal_channels, bandpass)
+        elif family == "nautilus":
+            framer = gp.Framer(frame_size=metadata["sampling_rate_hz"] // 10)
+            pipeline.connect(source, framer)
+            pipeline.connect(framer, bandpass)
+        else:
+            pipeline.connect(source, bandpass)
         pipeline.connect(bandpass, sink)
         return pipeline
