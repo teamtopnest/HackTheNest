@@ -1,12 +1,12 @@
 """P300 decoder command.
 
-Score the g.tec recordings, one held-out character at a time:
+Score the recordings shipped in backend/resources/unicorn-bi:
 
-    python -m backend.decoder.live_decoder ..\\sources\\p300-speller\\S1.mat
+    python -m backend.decoder.live_decoder
 
-Fit an LDA on one or more recordings and save it:
+Fit an LDA on those files and save it:
 
-    python -m backend.decoder.live_decoder --train ..\\sources\\p300-speller\\S1.mat --output model.joblib
+    python -m backend.decoder.live_decoder --train --output model.joblib
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(_repo_root))
     __package__ = "backend.decoder"
 
+from .config import bundled_recordings
 from .decode.features import extract_epochs
 from .decode.model import load_model, save_model, train_lda, train_recordings
 from .decode.online import OnlineDecoder
@@ -43,7 +44,11 @@ __all__ = [
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="P300 decoder offline tools")
-    parser.add_argument("recordings", nargs="+", help="paths to S1.mat ...")
+    parser.add_argument(
+        "recordings",
+        nargs="*",
+        help="MAT paths. Defaults to backend/resources/unicorn-bi/S*.mat",
+    )
     parser.add_argument(
         "--train",
         action="store_true",
@@ -51,8 +56,9 @@ def main(argv=None):
     )
     parser.add_argument("--output", default="model.joblib", help="path for --train")
     args = parser.parse_args(argv)
+    recordings = args.recordings or [str(path) for path in bundled_recordings()]
     if args.train:
-        recordings = [load_recording(path) for path in args.recordings]
+        recordings = [load_recording(path) for path in recordings]
         model = train_recordings(recordings)
         saved = save_model(model, args.output)
         print(f"saved {saved}")
@@ -60,7 +66,7 @@ def main(argv=None):
     print(
         "Causal filter, leave-one-character-out, scored by streaming replay"
     )
-    for path in args.recordings:
+    for path in recordings:
         report(path)
 
 

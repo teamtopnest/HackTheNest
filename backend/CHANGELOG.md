@@ -2,6 +2,11 @@
 
 Newest entries are at the top.
 
+## 1.0.4
+
+- Decoder scripts and tests read `S1.mat`–`S5.mat` from `backend/resources/unicorn-bi`. They no longer look outside the repo.
+- `python -m backend.decoder.live_decoder` with no paths scores that folder.
+
 ## 1.0.3 
 - Inteegrated P300 decoder, the Unicorn WebSocket, and the MongoDB importer now live together under `backend/`. `app/` is only the frontend.
 

@@ -34,16 +34,48 @@ Use 64-bit Python 3.12 (the validated interpreter), from this folder:
 
 ```powershell
 python -m venv .venv
+<<<<<<< Updated upstream
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 Copy-Item .env.example .env
+=======
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+
+# Score every S*.mat in backend\resources\unicorn-bi. Prints one AUC per file.
+.\backend\scripts\score.ps1
+
+# Same scorer, one file.
+.\backend\scripts\score.ps1 backend\resources\unicorn-bi\S1.mat
+
+# Fit an LDA on those files and write backend\model.joblib. That file is gitignored.
+.\backend\scripts\train.ps1
+
+# Headset WebSocket. Pair the Unicorn in Windows Bluetooth first.
+.\backend\scripts\stream.ps1
+
+# MongoDB API. Copy backend\.env.example to backend\.env and fill it in first.
+.\backend\scripts\ingest.ps1
+
+# Decoder unit tests, then the headset tests. Add -Mongo to include ingestion tests.
+.\backend\scripts\test.ps1
+>>>>>>> Stashed changes
 ```
 
 Edit `.env` locally; it is gitignored. For Atlas, set:
 
+<<<<<<< Updated upstream
 ```dotenv
 MONGODB_URI=mongodb+srv://<username>:<URL-encoded-password>@<cluster-host>/?retryWrites=true&w=majority
 MONGODB_DATABASE=hackthenest
 UNICORN_SERIAL=
+=======
+Direct module commands, if you are not using the scripts:
+
+```powershell
+python -m backend.decoder.live_decoder
+python -m backend.decoder.live_decoder --train --output backend\model.joblib
+python backend\run.py
+python -m uvicorn backend.app:app --host 127.0.0.1 --port 8000
+>>>>>>> Stashed changes
 ```
 
 Use your Atlas hostname, database user and password, not the angle-bracket
@@ -68,11 +100,28 @@ endpoints have no authentication; do not expose the server publicly.
 
 ## Discover, register, collect
 
+<<<<<<< Updated upstream
 In another PowerShell terminal:
 
 ```powershell
 $api = "http://127.0.0.1:8000"
 Invoke-RestMethod "$api/api/devices"
+=======
+Each S1-S5 file in `backend/resources/unicorn-bi` contains `fs=250`, `y` (samples x 8), and aligned `trig` (-1 non-target, 0 no trigger, +1 target). Together: **304,269 samples**, **2,434,152 values**, **1,220 chunks**, **750 target** and **5,250 non-target** markers. All source amplitudes are preserved without filtering or unit conversion.
+
+The supplied montage defines `[Fz, Cz, P3, Pz, P4, PO7, PO8, Oz]`. This is source configuration, not embedded MAT metadata. Do not substitute the frontend's different channel labels. The TVLDA abstract describes the matching eight-channel, 250 Hz Unicorn experiment; the older P300 paper's 256 Hz g.USBamp settings are not applied. The dataset information sheet mentions four subjects, but the overview and files include S5.
+
+**No verified acquisition dates exist in these files.** MATLAB export dates, file modification dates, and import dates must not become recording dates. Units remain `unknown` until supported by evidence.
+
+## Inspect/import
+
+Inspection requires neither dates nor database credentials:
+
+```powershell
+$files = Get-ChildItem backend\resources\unicorn-bi\S*.mat
+backend\.venv\Scripts\python.exe -m backend.importer @($files.FullName)
+```
+>>>>>>> Stashed changes
 
 # Replace this with a serial returned above.
 $device = @{ serial = "UN-1234" } | ConvertTo-Json

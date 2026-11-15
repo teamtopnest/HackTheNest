@@ -1,7 +1,7 @@
 # Score S1.mat-S5.mat, or the MAT paths you pass, with leave-one-character-out AUC.
 # Usage, from the repo root:
 #   .\backend\scripts\score.ps1
-#   .\backend\scripts\score.ps1 D:\data\S1.mat
+#   .\backend\scripts\score.ps1 backend\resources\unicorn-bi\S1.mat
 
 param(
     [Parameter(ValueFromRemainingArguments = $true)]
