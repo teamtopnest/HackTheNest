@@ -1,0 +1,85 @@
+{
+  "name": "AccessRequest",
+  "type": "object",
+  "title": "Access Request",
+  "description": "Inbound investor, partner, research and clinic enquiries submitted from the landing page.",
+  "properties": {
+    "inquiry_type": {
+      "type": "string",
+      "title": "Inquiry type",
+      "enum": [
+        "Investor",
+        "Partner",
+        "Research",
+        "Clinic"
+      ],
+      "enumColors": [
+        "blue",
+        "green",
+        "purple",
+        "gray"
+      ],
+      "default": "Investor"
+    },
+    "full_name": {
+      "type": "string",
+      "title": "Full name"
+    },
+    "email": {
+      "type": "string",
+      "title": "Email"
+    },
+    "organization": {
+      "type": "string",
+      "title": "Organization"
+    },
+    "message": {
+      "type": "string",
+      "title": "Message"
+    },
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "enum": [
+        "new",
+        "reviewing",
+        "connected"
+      ],
+      "enumColors": [
+        "blue",
+        "yellow",
+        "green"
+      ],
+      "default": "new"
+    }
+  },
+  "required": [
+    "full_name",
+    "email"
+  ],
+  "rls": {
+    "create": {},
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
