@@ -2,14 +2,14 @@
   "name": "AccessRequest",
   "type": "object",
   "title": "Access Request",
-  "description": "Inbound investor, partner, research and clinic enquiries submitted from the landing page.",
+  "description": "Demo, collaboration, research and clinic enquiries from the landing page.",
   "properties": {
     "inquiry_type": {
       "type": "string",
       "title": "Inquiry type",
       "enum": [
-        "Investor",
-        "Partner",
+        "Demo",
+        "Collaboration",
         "Research",
         "Clinic"
       ],
@@ -19,7 +19,7 @@
         "purple",
         "gray"
       ],
-      "default": "Investor"
+      "default": "Demo"
     },
     "full_name": {
       "type": "string",

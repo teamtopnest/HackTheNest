@@ -40,7 +40,7 @@ function CalibrationVisual() {
             <g key={ch}>
               <text x="10" y={y + 10} fontSize="11" fontWeight="600" fill="#1b263b">{ch}</text>
               <rect x="44" y={y} width="150" height="12" fill="#eef2f9" />
-              <rect x="44" y={y} width={150 * contact[i]} height="12" fill={good ? '#0057ff' : '#d97706'} />
+              <rect x="44" y={y} width={150 * contact[i]} height="12" fill={good ? '#38bdf8' : '#d97706'} />
               <path d={path} fill="none" stroke="#1b263b" strokeWidth="1.2" />
             </g>
           );
@@ -65,7 +65,7 @@ function SyncVisual() {
         ))}
         {[140, 290].map((x, i) => (
           <g key={x}>
-            <rect x={x} y="40" width="40" height="20" fill="#0057ff" />
+            <rect x={x} y="40" width="40" height="20" fill="#38bdf8" />
             <rect x={x + 22 + i * 6} y="105" width="40" height="20" fill="#1b263b" />
             <line x1={x + 22 + i * 6} y1="170" x2={x + 22 + i * 6} y2="190" stroke="#d97706" strokeWidth="3" />
             {Array.from({ length: 16 }, (_, k) => <circle key={k} cx={x - 8 + k * 6} cy="190" r="1.6" fill="#64748b" />)}
@@ -96,7 +96,7 @@ function Step({ number, title, status, children }) {
   return (
     <section className={`border p-6 sm:p-8 ${done ? 'border-emerald-400/40 bg-emerald-400/[0.04]' : 'border-white/10 bg-white/[0.02]'}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="mono-label text-[#5283ff]">{number} / {title}</p>
+        <p className="mono-label text-[#7dd3fc]">{number} / {title}</p>
         <span role="status" className={`flex items-center gap-1 border px-2 py-1 text-[0.65rem] ${done ? 'border-emerald-400/40 text-emerald-200' : 'border-amber-400/30 text-amber-200'}`}>
           {done && <Check size={12} />}{STATUS_TEXT[status]}
         </span>
@@ -106,7 +106,7 @@ function Step({ number, title, status, children }) {
   );
 }
 
-const primary = 'focus-ring flex items-center gap-2 bg-[#0057FF] px-4 py-3 text-sm text-white hover:bg-[#3578ff] disabled:cursor-not-allowed disabled:opacity-40';
+const primary = 'focus-ring flex items-center gap-2 bg-[#0369A1] px-4 py-3 text-sm text-white hover:bg-[#075985] disabled:cursor-not-allowed disabled:opacity-40';
 const secondary = 'focus-ring flex items-center gap-2 border border-white/25 px-4 py-3 text-sm text-white hover:border-white disabled:cursor-not-allowed disabled:opacity-40';
 
 function RunControls({ name, status, demo, onRun, onComplete, onReset }) {
@@ -154,8 +154,8 @@ export default function Calibration({ model, demo, checked, busy, error, onBack,
     <main className="mx-auto max-w-[1400px] px-[clamp(20px,5vw,64px)] pb-20 pt-12 sm:pt-16">
       <button type="button" onClick={onBack} disabled={busy} className="focus-ring flex items-center gap-2 text-xs text-white/55 hover:text-white disabled:opacity-40"><ArrowLeft size={14} /> Back to device setup</button>
       <div className="mt-8 max-w-3xl">
-        <p className="mono-label text-[#0057FF]">02 / Calibration and synchronization</p>
-        <h1 className="mt-4 font-heading text-4xl font-semibold tracking-tight sm:text-5xl">Prepare your headset<span className="text-[#0057FF]">.</span></h1>
+        <p className="mono-label text-[#38BDF8]">02 / Calibration and synchronization</p>
+        <h1 className="mt-4 font-heading text-4xl font-semibold tracking-tight sm:text-5xl">Prepare your headset<span className="text-[#38BDF8]">.</span></h1>
         <p className="mt-4 text-sm leading-7 text-white/55">Selected: {model}{demo && ' (demo)'}. Complete all three steps to open the workspace.</p>
       </div>
       <div className="mt-8 flex gap-3 border border-amber-400/30 bg-amber-400/5 p-4 text-sm leading-6 text-amber-100/80">
@@ -219,10 +219,10 @@ export default function Calibration({ model, demo, checked, busy, error, onBack,
           <h2 className="font-heading text-xl font-semibold">Continue to the workspace</h2>
           <p className="mono-label text-[0.6rem] text-white/55">{completed} / 3 steps completed</p>
         </div>
-        <div className="mt-4 h-1 bg-white/10" aria-hidden="true"><div className="h-full bg-[#0057FF] transition-all" style={{ width: `${(completed / 3) * 100}%` }} /></div>
+        <div className="mt-4 h-1 bg-white/10" aria-hidden="true"><div className="h-full bg-[#0369A1] transition-all" style={{ width: `${(completed / 3) * 100}%` }} /></div>
         {error && <p role="alert" className="mt-3 text-sm text-red-300">{error}</p>}
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <button type="button" onClick={demo ? onDemo : onPreview} disabled={!canContinue} className="focus-ring flex items-center gap-3 bg-[#0057FF] px-5 py-4 mono-label text-[0.6rem] text-white hover:bg-[#3578ff] disabled:cursor-not-allowed disabled:opacity-40">
+          <button type="button" onClick={demo ? onDemo : onPreview} disabled={!canContinue} className="focus-ring flex items-center gap-3 bg-[#0369A1] px-5 py-4 mono-label text-[0.6rem] text-white hover:bg-[#075985] disabled:cursor-not-allowed disabled:opacity-40">
             {busy ? 'Starting…' : demo ? 'Open demo workspace' : 'Start live EEG preview'} <ArrowRight size={16} />
           </button>
           {demo && <button type="button" onClick={onDemo} disabled={busy} className="focus-ring text-xs text-white/55 underline underline-offset-4 hover:text-white disabled:opacity-40">Skip checks (demo only)</button>}

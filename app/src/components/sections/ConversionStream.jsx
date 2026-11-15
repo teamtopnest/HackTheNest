@@ -17,18 +17,18 @@ function RawSignal() {
   });
 
   return (
-    <div className="relative h-24 overflow-hidden border-b border-white/10 bg-[#050505]">
+    <div className="relative h-24 overflow-hidden border-b border-white/10 bg-[#07111B]">
       <div className="absolute inset-0 flex items-end gap-[3px] px-3 pb-3 opacity-90">
         {bars.map((h, i) => (
           <span
             key={i}
-            className="flex-1 bg-[#0057FF]"
+            className="flex-1 bg-[#0369A1]"
             style={{ height: `${h}%`, opacity: 0.35 + (i % 5) * 0.12 }}
           />
         ))}
       </div>
       <div className="absolute inset-x-0 top-2 flex justify-between px-3">
-        <span className="mono-label text-[0.5625rem] text-[#F2F2F2]/40">Raw · 8 ch · 250 hz</span>
+        <span className="mono-label text-[0.5625rem] text-[#F8FAFC]/40">Raw · 8 ch · 250 hz</span>
         <span className="mono-label text-[0.5625rem] text-[#00FF41]">streaming</span>
       </div>
     </div>
@@ -51,7 +51,7 @@ export default function ConversionStream() {
   }, [runId]);
 
   return (
-    <section id="stream" className="relative border-t border-white/10 bg-[#050505] py-[clamp(64px,9vw,120px)]">
+    <section id="stream" className="relative border-t border-white/10 bg-[#07111B] py-[clamp(64px,9vw,120px)]">
       <div className="signal-grid pointer-events-none absolute inset-0 opacity-60" aria-hidden="true" />
       <div className="relative mx-auto max-w-[1400px] px-[clamp(20px,5vw,64px)]">
         <SectionHeader
@@ -66,35 +66,35 @@ export default function ConversionStream() {
             {STATS.map((stat) => (
               <div key={stat.label} className="border-b border-white/10 px-6 py-7 last:border-b-0">
                 <div className="flex items-baseline gap-1.5">
-                  <span className="display text-[clamp(2.2rem,5vw,3.2rem)] text-[#F2F2F2]">{stat.value}</span>
-                  <span className="mono text-sm text-[#0057FF]">{stat.unit}</span>
+                  <span className="display text-[clamp(2.2rem,5vw,3.2rem)] text-[#F8FAFC]">{stat.value}</span>
+                  <span className="mono text-sm text-[#38BDF8]">{stat.unit}</span>
                 </div>
-                <span className="mono-label mt-2 block text-[#F2F2F2]/40">{stat.label}</span>
+                <span className="mono-label mt-2 block text-[#F8FAFC]/40">{stat.label}</span>
               </div>
             ))}
           </div>
 
-          <div className="flex flex-col border border-white/10 bg-[#080808]">
+          <div className="flex flex-col border border-white/10 bg-[#0B1A28]">
             <RawSignal />
 
             <div className="flex min-h-[220px] flex-col justify-between p-6 sm:p-8">
               <div>
                 <div className="mb-4 flex items-center gap-2">
                   <span className="live-dot h-1.5 w-1.5 bg-[#00FF41]" aria-hidden="true" />
-                  <span className="mono-label text-[#F2F2F2]/40">Decoded text · local model</span>
+                  <span className="mono-label text-[#F8FAFC]/40">Decoded text · local model</span>
                 </div>
-                <p className="mono text-[clamp(0.95rem,1.9vw,1.35rem)] leading-relaxed tracking-tight text-[#F2F2F2]">
+                <p className="mono text-[clamp(0.95rem,1.9vw,1.35rem)] leading-relaxed tracking-tight text-[#F8FAFC]">
                   {typed}
-                  <span className="caret ml-0.5 inline-block h-[1.1em] w-[0.5em] translate-y-[0.15em] bg-[#0057FF]" aria-hidden="true" />
+                  <span className="caret ml-0.5 inline-block h-[1.1em] w-[0.5em] translate-y-[0.15em] bg-[#0369A1]" aria-hidden="true" />
                 </p>
               </div>
 
               <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-5">
-                <span className="mono-label text-[#F2F2F2]/30">Decoder v2.4 · on-device · no cloud upload</span>
+                <span className="mono-label text-[#F8FAFC]/30">Decoder v2.4 · on-device · no cloud upload</span>
                 <button
                   type="button"
                   onClick={() => setRunId((n) => n + 1)}
-                  className="focus-ring border border-[#F2F2F2]/25 px-5 py-2.5 mono-label text-[#F2F2F2] transition-colors duration-300 hover:border-[#0057FF] hover:bg-[#0057FF] hover:text-white"
+                  className="focus-ring border border-[#F8FAFC]/25 px-5 py-2.5 mono-label text-[#F8FAFC] transition-colors duration-300 hover:border-[#38BDF8] hover:bg-[#075985] hover:text-white"
                 >
                   Re-run decode
                 </button>

@@ -32,7 +32,7 @@ export default function ChannelTopology() {
   const active = CHANNELS.find((c) => c.id === activeId) ?? CHANNELS[0];
 
   return (
-    <section id="channels" className="relative border-t border-white/10 bg-[#050505] py-[clamp(64px,9vw,120px)]">
+    <section id="channels" className="relative border-t border-white/10 bg-[#07111B] py-[clamp(64px,9vw,120px)]">
       <div className="mx-auto max-w-[1400px] px-[clamp(20px,5vw,64px)]">
         <SectionHeader
           index="02"
@@ -51,23 +51,23 @@ export default function ChannelTopology() {
                 onClick={() => setActiveId(channel.id)}
                 aria-pressed={isActive}
                 className={`focus-ring group relative flex flex-col gap-4 p-5 text-left transition-colors duration-300 ${
-                  isActive ? 'bg-[#0A0E1A]' : 'bg-[#050505] hover:bg-[#080808]'
+                  isActive ? 'bg-[#0D2638]' : 'bg-[#07111B] hover:bg-[#0B1A28]'
                 }`}
               >
                 <span
                   className={`absolute inset-x-0 top-0 h-px transition-colors duration-300 ${
-                    isActive ? 'bg-[#0057FF]' : 'bg-transparent'
+                    isActive ? 'bg-[#0369A1]' : 'bg-transparent'
                   }`}
                   aria-hidden="true"
                 />
                 <div className="flex items-start justify-between">
                   <div>
-                    <span className="mono text-lg font-medium text-[#F2F2F2]">{channel.id}</span>
-                    <p className="mono-label mt-1 text-[0.625rem] text-[#F2F2F2]/40">{channel.region}</p>
+                    <span className="mono text-lg font-medium text-[#F8FAFC]">{channel.id}</span>
+                    <p className="mono-label mt-1 text-[0.625rem] text-[#F8FAFC]/40">{channel.region}</p>
                   </div>
                   <span
                     className={`mono-label text-[0.5625rem] ${
-                      isActive ? 'text-[#0057FF]' : 'text-[#F2F2F2]/30'
+                      isActive ? 'text-[#38BDF8]' : 'text-[#F8FAFC]/30'
                     }`}
                   >
                     {channel.band}
@@ -78,18 +78,18 @@ export default function ChannelTopology() {
                   <path
                     d={wavePath(channel.seed)}
                     fill="none"
-                    stroke={isActive ? '#0057FF' : 'rgba(242,242,242,0.28)'}
+                    stroke={isActive ? '#38BDF8' : 'rgba(242,242,242,0.28)'}
                     strokeWidth="1.2"
                     strokeLinecap="round"
                   />
                 </svg>
 
                 <div className="flex items-baseline justify-between border-t border-white/10 pt-3">
-                  <span className="mono text-sm text-[#F2F2F2]/85">
+                  <span className="mono text-sm text-[#F8FAFC]/85">
                     {channel.uv.toFixed(1)}
-                    <span className="ml-1 text-[0.625rem] text-[#F2F2F2]/40">µV</span>
+                    <span className="ml-1 text-[0.625rem] text-[#F8FAFC]/40">µV</span>
                   </span>
-                  <span className="mono-label text-[0.5625rem] text-[#F2F2F2]/30">
+                  <span className="mono-label text-[0.5625rem] text-[#F8FAFC]/30">
                     {channel.impedance.toFixed(1)} kΩ
                   </span>
                 </div>
@@ -100,27 +100,27 @@ export default function ChannelTopology() {
 
         <div className="mt-6 flex flex-col gap-6 border border-white/10 p-6 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
-            <span className="mono-label text-[#F2F2F2]/40">Selected node</span>
-            <span className="mono text-xl text-[#F2F2F2]">{active.id}</span>
-            <span className="mono-label text-[#C5A059]">{active.region}</span>
+            <span className="mono-label text-[#F8FAFC]/40">Selected node</span>
+            <span className="mono text-xl text-[#F8FAFC]">{active.id}</span>
+            <span className="mono-label text-[#7DD3FC]">{active.region}</span>
           </div>
           <div className="flex flex-wrap items-center gap-x-10 gap-y-3">
             <div>
-              <span className="mono-label block text-[#F2F2F2]/35">Signal</span>
+              <span className="mono-label block text-[#F8FAFC]/35">Signal</span>
               <span className="mono text-sm text-[#00FF41]">+{active.uv.toFixed(1)} µV</span>
             </div>
             <div>
-              <span className="mono-label block text-[#F2F2F2]/35">SNR</span>
-              <span className="mono text-sm text-[#F2F2F2]/80">{active.snr.toFixed(1)} dB</span>
+              <span className="mono-label block text-[#F8FAFC]/35">SNR</span>
+              <span className="mono text-sm text-[#F8FAFC]/80">{active.snr.toFixed(1)} dB</span>
             </div>
             <div>
-              <span className="mono-label block text-[#F2F2F2]/35">Impedance</span>
-              <span className="mono text-sm text-[#F2F2F2]/80">{active.impedance.toFixed(1)} kΩ</span>
+              <span className="mono-label block text-[#F8FAFC]/35">Impedance</span>
+              <span className="mono text-sm text-[#F8FAFC]/80">{active.impedance.toFixed(1)} kΩ</span>
             </div>
           </div>
         </div>
 
-        <p className="mono-label mt-4 text-[0.5625rem] text-[#F2F2F2]/25">
+        <p className="mono-label mt-4 text-[0.5625rem] text-[#F8FAFC]/25">
           Sample readout — connect a G.tech Unicorn to stream your own signal
         </p>
       </div>
