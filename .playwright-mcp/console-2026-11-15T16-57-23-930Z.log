@@ -1,0 +1,2 @@
+[    3414ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://neuronvision.us/favicon.ico:1
+[    3890ms] [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://api.neuronvision.us/v1/recordings:1

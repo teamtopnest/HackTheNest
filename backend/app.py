@@ -104,23 +104,12 @@ def create_app(store=None, token: str | None = None, owner: str | None = None):
             raise HTTPException(401, "Valid ingestion token required")
         return request.app.state.owner
 
-    def speech_authorized(
-        credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
-    ):
-        speech_token = os.environ.get("EEG_DEMO_TOKEN", "")
-        if len(speech_token) < 32 or speech_token.startswith("REPLACE_"):
-            raise HTTPException(503, "Configure the server's EEG_DEMO_TOKEN for demo speech")
-        if credentials is None or not hmac.compare_digest(
-            credentials.credentials.encode("utf-8"), speech_token.encode("utf-8")
-        ):
-            raise HTTPException(401, "A valid demo speech access token is required")
-
     @app.get("/health")
     def health():
         return {"status": "ok"}
 
     @app.post("/api/demo/speech")
-    def demo_speech(selection: DemoSpeechSelection, access=Depends(speech_authorized)):
+    def demo_speech(selection: DemoSpeechSelection):
         return Response(
             content=synthesize_demo_speech(selection.path),
             media_type="audio/mpeg",

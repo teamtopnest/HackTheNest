@@ -44,45 +44,42 @@ def test_api_auth_validation_error_redaction_and_database_failure(recording):
     store.close.assert_called_once()
 
 
-def test_cloud_speech_requires_separate_demo_token_and_supports_frontend_origin(monkeypatch):
-    demo_token = "test-demo-token-" + "d" * 32
-    monkeypatch.setenv("EEG_DEMO_TOKEN", demo_token)
+def test_public_demo_speech_supports_frontend_origin_and_keeps_ingestion_private(monkeypatch):
+    monkeypatch.setenv("EEG_DEMO_TOKEN", "")
     monkeypatch.setenv("EEG_ALLOWED_ORIGINS", "https://neuronvision.us")
     speech = Mock(return_value=b"demo audio")
     monkeypatch.setattr("backend.app.synthesize_demo_speech", speech)
     app = create_app(store=Mock(spec=MongoStore), token=TOKEN, owner="test-owner")
     with TestClient(app) as client:
         assert client.get("/health").json() == {"status": "ok"}
-        for headers in ({}, {"Authorization": f"Bearer {TOKEN}"}):
-            assert client.post("/api/demo/speech", json={"path": [0]}, headers=headers).status_code == 401
-        speech.assert_not_called()
         response = client.post(
             "/api/demo/speech", json={"path": [0, 0, 0]},
-            headers={"Authorization": f"Bearer {demo_token}", "Origin": "https://neuronvision.us"},
+            headers={"Origin": "https://neuronvision.us"},
         )
         assert response.status_code == 200
         assert response.content == b"demo audio"
         assert response.headers["cache-control"] == "no-store"
         assert response.headers["access-control-allow-origin"] == "https://neuronvision.us"
         speech.assert_called_once_with([0, 0, 0])
-        assert client.get("/v1/recordings", headers={"Authorization": f"Bearer {demo_token}"}).status_code == 401
+        assert client.get("/v1/recordings").status_code == 401
         preflight = client.options("/api/demo/speech", headers={
             "Origin": "https://neuronvision.us",
             "Access-Control-Request-Method": "POST",
-            "Access-Control-Request-Headers": "authorization,content-type",
+            "Access-Control-Request-Headers": "content-type",
         })
         assert preflight.status_code == 200
         assert client.options("/api/demo/speech", headers={
             "Origin": "https://untrusted.test", "Access-Control-Request-Method": "POST",
         }).status_code == 400
-        assert client.post("/api/demo/speech", json={"path": []},
-                           headers={"Authorization": f"Bearer {demo_token}"}).status_code == 422
+        assert client.post("/api/demo/speech", json={"path": []}).status_code == 422
 
 
-def test_cloud_speech_reports_missing_access_configuration(monkeypatch):
-    monkeypatch.setenv("EEG_DEMO_TOKEN", "")
+def test_public_demo_speech_rejects_arbitrary_text(monkeypatch):
+    speech = Mock()
+    monkeypatch.setattr("backend.app.synthesize_demo_speech", speech)
     with TestClient(create_app(store=Mock(spec=MongoStore), token=TOKEN, owner="test-owner")) as client:
-        assert client.post("/api/demo/speech", json={"path": [0]}).status_code == 503
+        assert client.post("/api/demo/speech", json={"text": "Arbitrary text"}).status_code == 422
+    speech.assert_not_called()
 
 
 def test_sender_retry_and_https(monkeypatch, recording):

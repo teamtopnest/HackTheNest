@@ -9,7 +9,6 @@ fi
 cd /opt/hackthenest/app
 command -v nginx >/dev/null
 command -v certbot >/dev/null
-test -f app/dist/index.html
 test -f app/src/lib/communication-menu.json
 
 if ! id hackthenest >/dev/null 2>&1; then
@@ -23,6 +22,9 @@ fi
 chown root:hackthenest /etc/hackthenest/backend.env
 chmod 640 /etc/hackthenest/backend.env
 chmod 755 /opt/hackthenest
+chown -R root:root /opt/hackthenest/app
+find backend app -type d -exec chmod 755 {} +
+find backend app -type f -exec chmod 644 {} +
 
 if [ ! -x /opt/hackthenest/venv/bin/python ]; then
     python3 -m venv /opt/hackthenest/venv
@@ -38,7 +40,7 @@ systemctl enable --now nginx
 systemctl reload nginx
 
 if grep -qE 'REPLACE_|CLUSTER_HOST' /etc/hackthenest/backend.env; then
-    echo "Frontend installed. Backend not started: replace placeholders in /etc/hackthenest/backend.env."
+    echo "Backend installed but not started: replace placeholders in /etc/hackthenest/backend.env."
 else
     systemctl enable neuronvision
     systemctl restart neuronvision
