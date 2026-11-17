@@ -2,7 +2,7 @@
 
 NeuronVision is TopNest Group’s assistive brain-computer interface for [HackTheNest 2026](https://github.com/teamtopnest/HackTheNest). It helps a person who cannot rely on speech ask for what they need. A g.tec EEG headset watches for the P300 response to a flashing choice, and the interface turns that choice into a request: help, pain, movement, a drink, or a call to someone nearby.
 
-The public site is [neuronvision.us](https://neuronvision.us).
+The public site is [neuronvision.us](https://neuronvision.us) or  [neuronvision.web.app](https://neuronvision.web.app/)
 
 This is an assistive research prototype, not a medical device.
 
